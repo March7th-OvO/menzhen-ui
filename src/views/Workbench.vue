@@ -275,37 +275,7 @@ const selectPatient = (patient) => {
   console.log('当前选中患者更新为:', currentReg.value)
 }
 
-// 添加提交诊疗结果的方法
-const handleSubmitDiagnosis = async () => {
-  if (!currentReg.value.regId) {
-    ElMessage.warning('请选择患者')
-    return
-  }
 
-  try {
-    await submitDiagnosis({
-      regId: currentReg.value.regId,
-      doctorId: doctorId,
-      description: diagnosisForm.description,
-      diagnosis: diagnosisForm.diagnosis,
-      advice: diagnosisForm.advice,
-      medicines: diagnosisForm.medicines
-    })
-
-    ElMessage.success('诊疗结果提交成功')
-    // 提交成功后刷新患者列表
-    await refreshPatients()
-    // 清空当前选中患者和表单
-    currentReg.value = {}
-    diagnosisForm.description = ''
-    diagnosisForm.diagnosis = ''
-    diagnosisForm.advice = ''
-    diagnosisForm.medicines = []
-  } catch (error) {
-    console.error('提交诊疗结果失败:', error)
-    ElMessage.error('提交诊疗结果失败: ' + (error.message || '未知错误'))
-  }
-}
 
 // 添加添加药品到处方的方法
 const addMedicineToTable = (medicineId) => {
