@@ -31,12 +31,40 @@ export const getDepts = async () => {
         return []
     }
 }
+// 根据科室ID获取科室详细信息
+export const getDeptById = async (deptId) => {
+    try {
+        const response = await request.get(`/dept/${deptId}`)
+        return response
+    } catch (error) {
+        console.error('API调用失败 - 获取科室信息:', error)
+        throw error
+    }
+}
 export const getDoctors = (deptId) => request.get(`/doctor/list-available?deptId=${deptId}`)
 export const getLevels = () => request.get('/reg-level/list')
 export const createRegistration = (data) => request.post('/registration/create', data)
 
 // 医生工作台
 export const getPendingPatients = (doctorId) => request.get(`/doctor/workbench/pending?doctorId=${doctorId}`)
+export const getDoctorInfoByUserId = async () => {
+    try {
+        const response = await request.get('/doctor/info')
+        return response
+    } catch (error) {
+        console.error('API调用失败 - 获取医生信息:', error)
+        throw error
+    }
+}
+export const getDoctorInfo = async (doctorId) => {
+    try {
+        const response = await request.get(`/doctor/info/${doctorId}`)
+        return response
+    } catch (error) {
+        console.error('API调用失败 - 获取医生信息:', error)
+        throw error
+    }
+}
 export const submitDiagnosis = (data) => request.post('/doctor/workbench/diagnose', data)
 
 // 药品

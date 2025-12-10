@@ -1,3 +1,4 @@
+
 <template>
   <div class="app-layout">
     <el-container>
@@ -6,7 +7,7 @@
           <el-icon><Monitor /></el-icon> OMS System
         </div>
         <el-menu :default-active="$route.path" class="el-menu-vertical">
-          <el-menu-item index="/registration" @click="navTo('/registration')">
+          <el-menu-item v-if="user.role === 'patient' || user.role === 'admin'" index="/registration" @click="navTo('/registration')">
             <el-icon><Ticket /></el-icon>
             <span>门诊挂号</span>
           </el-menu-item>

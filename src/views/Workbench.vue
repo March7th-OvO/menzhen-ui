@@ -1,6 +1,29 @@
 <template>
   <div class="workbench-container">
-    <el-row :gutter="20" style="height: 100%;">
+    <!-- 医生信息卡片 -->
+    <el-card class="doctor-info-card" shadow="hover">
+      <div class="doctor-info">
+        <el-avatar :size="60" icon="UserFilled" style="background-color: #409EFF;" />
+        <div class="doctor-details">
+          <div class="doctor-name">
+            {{ doctorInfo.realName +"医生" || '未知医生' }}
+            <span class="doctor-id">ID: {{ doctorInfo.doctorId || '未知' }}</span>
+          </div>
+          <div class="doctor-meta">
+            <el-tag type="primary" size="small">{{ doctorInfo.deptName || '未分配科室' }}</el-tag>
+            <el-tag type="success" size="small">{{ doctorInfo.title || '医师' }}</el-tag>
+          </div>
+        </div>
+        <div class="stats">
+          <div class="stat-item">
+            <div class="stat-value">{{ pendingPatients.length }}</div>
+            <div class="stat-label">待诊患者</div>
+          </div>
+        </div>
+      </div>
+    </el-card>
+
+    <el-row :gutter="20" style="height: calc(100% - 120px); margin-top: 20px;">
       <el-col :span="6" class="full-height">
         <el-card class="full-height patient-list-card" body-style="padding:0">
           <template #header>
@@ -20,7 +43,7 @@
       </el-col>
 
       <el-col :span="18" class="full-height">
-        <el-card class="full-height" v-if="currentReg.regId">
+        <el-card class="full-height" v-if="currentReg && (currentReg.regId || currentReg.settlement_id)">
           <template #header>
             <div class="diagnosis-header">
               <span>正在接诊：<b>{{ currentReg.patientName }}</b></span>
@@ -49,7 +72,7 @@
                     v-model="selectedMedicineId"
                     filterable
                     remote
-                    :remote-method="searchMed"
+                    :remote-method="searchMedicinesFunc"
                     placeholder="搜索药品名称..."
                     style="width: 300px;"
                     @change="addMedicineToTable"
@@ -86,26 +109,26 @@
   </div>
 </template>
 
+
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
-import { getPendingPatients, searchMedicines, submitDiagnosis } from '../api'
+import { getPendingPatients, searchMedicines, submitDiagnosis, getDoctorInfoByUserId, getDeptById } from '../api'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { jwtDecode } from 'jwt-decode'
 
 // 获取当前登录用户信息
 const currentUser = JSON.parse(localStorage.getItem('user') || '{}')
 
-// 从JWT token中解析用户ID
+// 医生信息
+const doctorInfo = ref({
+  doctorId: null,
+  realName: '',
+  deptId: null,
+  deptName: '',
+  title: ''
+})
+
+// 医生ID（用于其他功能调用）
 let doctorId = null
-try {
-  const token = localStorage.getItem('token')
-  if (token) {
-    const decodedToken = jwtDecode(token)
-    doctorId = decodedToken.userId || decodedToken.id || decodedToken.doctorId || null
-  }
-} catch (error) {
-  console.error('解析JWT token失败:', error)
-}
 
 // 检查用户是否有权限访问医生工作台
 const hasPermission = currentUser.role && (currentUser.role === 'doctor' || currentUser.role === 'admin')
@@ -130,95 +153,299 @@ const diagnosisForm = reactive({
 
 onMounted(() => {
   if (hasPermission) {
-    // 只有医生才需要获取待诊患者列表
-    if (currentUser.role === 'doctor') {
-      refreshPatients()
-    }
+    // 获取医生信息
+    loadDoctorInfo()
     // 预加载一些药品
-    searchMed('')
+    searchMedicinesFunc('')
   }
 })
 
-const refreshPatients = async () => {
-  // 更详细的错误提示
-  if (!doctorId) {
-    console.error('无法从token中解析出医生ID，token信息:', localStorage.getItem('token'))
-    return ElMessage.error('无法获取医生ID，请检查登录状态或联系管理员')
+// 加载医生信息（分步查询：userId → doctorId → deptId → deptName）
+const loadDoctorInfo = async () => {
+  try {
+    // 步骤1: 通过 userId 获取医生基本信息（包含 doctorId 和 deptId）
+    console.log('步骤1: 正在通过 userId 获取医生基本信息...')
+    const doctorData = await getDoctorInfoByUserId()
+    console.log('获取到的医生原始信息:', doctorData)
+
+    // 提取医生基本信息
+    const extractedDoctorId = doctorData.doctorId || doctorData.id || doctorData.doctor_id
+    const extractedDeptId = doctorData.departmentId || doctorData.deptId || doctorData.dept_id
+    const extractedName = doctorData.name || doctorData.realName || doctorData.doctorName || ''
+    const extractedTitle = doctorData.title || doctorData.position || ''
+
+    console.log('提取的信息:', {
+      doctorId: extractedDoctorId,
+      deptId: extractedDeptId,
+      name: extractedName,
+      title: extractedTitle
+    })
+
+    // 步骤2: 如果有科室ID，则查询科室详细信息
+    let deptName = '未分配科室'
+    if (extractedDeptId) {
+      try {
+        console.log(`步骤2: 正在查询科室信息，科室ID: ${extractedDeptId}`)
+        const deptData = await getDeptById(extractedDeptId)
+        console.log('获取到的科室信息:', deptData)
+
+        // 提取科室名称
+        deptName = deptData.deptName || deptData.name || deptData.departmentName || '未知科室'
+        console.log('提取的科室名称:', deptName)
+      } catch (deptError) {
+        console.error('获取科室信息失败:', deptError)
+        // 科室信息获取失败不影响整体流程，使用默认值
+        deptName = '未分配科室'
+      }
+    } else {
+      console.log('医生未分配科室')
+    }
+
+    // 步骤3: 组装完整的医生信息
+    doctorInfo.value = {
+      doctorId: extractedDoctorId,
+      realName: extractedName,
+      deptId: extractedDeptId,
+      deptName: deptName,
+      title: extractedTitle
+    }
+
+    // 设置 doctorId 供其他功能使用
+    doctorId = doctorInfo.value.doctorId
+
+    console.log('最终组装的医生信息:', doctorInfo.value)
+    console.log('doctorId:', doctorId)
+
+    // 获取医生信息后，再获取待诊患者列表
+    if (currentUser.role === 'doctor' && doctorId) {
+      await refreshPatients()
+    }
+  } catch (error) {
+    console.error('获取医生信息失败:', error)
+    console.error('错误详情:', {
+      message: error.message,
+      response: error.response?.data
+    })
+
+    // 即使获取失败也设置默认值
+    doctorInfo.value = {
+      doctorId: null,
+      realName: currentUser.realName || '未知医生',
+      deptId: null,
+      deptName: '未分配科室',
+      title: '医师'
+    }
+
+    ElMessage.error('获取医生信息失败: ' + (error.message || '未知错误'))
   }
-  pendingPatients.value = await getPendingPatients(doctorId)
 }
 
-const selectPatient = (p) => {
-  currentReg.value = p
-  // 重置表单
-  diagnosisForm.description = ''
-  diagnosisForm.diagnosis = ''
-  diagnosisForm.advice = ''
-  diagnosisForm.medicines = []
+// 搜索药品函数
+const searchMedicinesFunc = async (keyword) => {
+  try {
+    medicineOptions.value = await searchMedicines(keyword)
+  } catch (error) {
+    console.error('搜索药品失败:', error)
+    medicineOptions.value = []
+  }
 }
 
-const searchMed = async (query) => {
-  medicineOptions.value = await searchMedicines(query)
+const refreshPatients = async () => {
+  // 移除了对 doctorId 的严格检查，改为更宽松的检查
+  if (!doctorId) {
+    console.error('无法获取医生ID，当前doctorId:', doctorId)
+    ElMessage.error('无法获取医生ID，请检查登录状态或联系管理员')
+    return
+  }
+
+  console.log('正在获取待诊患者，doctorId:', doctorId)
+  try {
+    pendingPatients.value = await getPendingPatients(doctorId)
+    console.log('获取到的患者列表:', pendingPatients.value)
+  } catch (error) {
+    console.error('获取待诊患者失败:', error)
+    ElMessage.error('获取待诊患者失败: ' + (error.message || '未知错误'))
+  }
 }
 
-const addMedicineToTable = (medId) => {
-  const med = medicineOptions.value.find(m => m.medId === medId)
-  if(med) {
-    // 查重
-    if(diagnosisForm.medicines.find(m => m.medId === medId)) {
-      ElMessage.warning('该药品已添加')
+// 添加更多调试信息的 selectPatient 方法
+const selectPatient = (patient) => {
+  console.log('点击了患者:', patient)
+  currentReg.value = patient
+  console.log('当前选中患者更新为:', currentReg.value)
+}
+
+// 添加提交诊疗结果的方法
+const handleSubmitDiagnosis = async () => {
+  if (!currentReg.value.regId) {
+    ElMessage.warning('请选择患者')
+    return
+  }
+
+  try {
+    await submitDiagnosis({
+      regId: currentReg.value.regId,
+      doctorId: doctorId,
+      description: diagnosisForm.description,
+      diagnosis: diagnosisForm.diagnosis,
+      advice: diagnosisForm.advice,
+      medicines: diagnosisForm.medicines
+    })
+
+    ElMessage.success('诊疗结果提交成功')
+    // 提交成功后刷新患者列表
+    await refreshPatients()
+    // 清空当前选中患者和表单
+    currentReg.value = {}
+    diagnosisForm.description = ''
+    diagnosisForm.diagnosis = ''
+    diagnosisForm.advice = ''
+    diagnosisForm.medicines = []
+  } catch (error) {
+    console.error('提交诊疗结果失败:', error)
+    ElMessage.error('提交诊疗结果失败: ' + (error.message || '未知错误'))
+  }
+}
+
+// 添加添加药品到处方的方法
+const addMedicineToTable = (medicineId) => {
+  const medicine = medicineOptions.value.find(item => item.medId === medicineId)
+  if (medicine) {
+    // 检查是否已经添加了该药品
+    const existingMedicine = diagnosisForm.medicines.find(item => item.medId === medicineId)
+    if (existingMedicine) {
+      ElMessage.warning('该药品已添加到处方中')
       return
     }
+
     diagnosisForm.medicines.push({
-      medId: med.medId,
-      medName: med.medName,
-      price: med.price,
+      medId: medicine.medId,
+      medName: medicine.medName,
+      price: medicine.price,
       quantity: 1,
       usageInfo: ''
     })
+    selectedMedicineId.value = null
   }
-  selectedMedicineId.value = null
 }
 
+// 添加从处方中移除药品的方法
 const removeMedicine = (index) => {
   diagnosisForm.medicines.splice(index, 1)
 }
 
+// 添加提交诊疗结果的方法
 const handleSubmitDiagnosis = async () => {
-  if (!hasPermission) {
-    return ElMessage.error('当前用户无权执行此操作')
-  }
-
-  // 只有医生可以提交诊断结果
-  if (currentUser.role !== 'doctor') {
-    return ElMessage.error('只有医生可以提交诊断结果')
-  }
-
-  if(!diagnosisForm.diagnosis) return ElMessage.warning('请填写诊断结果')
-
-  const payload = {
-    regId: currentReg.value.regId,
-    patientId: currentReg.value.patientId,
-    doctorId: doctorId,
-    ...diagnosisForm
+  console.log('当前选中患者:', currentReg.value)
+  // 更新检查逻辑，使其与渲染条件保持一致
+  if (!currentReg.value || !(currentReg.value.regId || currentReg.value.settlement_id)) {
+    ElMessage.warning('请选择患者')
+    return
   }
 
   try {
-    await submitDiagnosis(payload)
-    ElMessage.success('诊疗完成，处方已开具')
-    // 移除已诊患者并重置
+    // 使用标准化的ID
+    const regId = currentReg.value.regId || currentReg.value.settlement_id
+
+    await submitDiagnosis({
+      regId: regId,
+      doctorId: doctorId,
+      description: diagnosisForm.description,
+      diagnosis: diagnosisForm.diagnosis,
+      advice: diagnosisForm.advice,
+      medicines: diagnosisForm.medicines
+    })
+
+    ElMessage.success('诊疗结果提交成功')
+    // 提交成功后刷新患者列表
+    await refreshPatients()
+    // 清空当前选中患者和表单
     currentReg.value = {}
-    refreshPatients()
-  } catch(e) {
-    console.error(e)
+    diagnosisForm.description = ''
+    diagnosisForm.diagnosis = ''
+    diagnosisForm.advice = ''
+    diagnosisForm.medicines = []
+  } catch (error) {
+    console.error('提交诊疗结果失败:', error)
+    ElMessage.error('提交诊疗结果失败: ' + (error.message || '未知错误'))
   }
 }
+
 </script>
 
-
-
 <style scoped>
-.workbench-container { height: calc(100vh - 80px); } /* 减去头部高度 */
+.doctor-name {
+  font-size: 20px;
+  font-weight: bold;
+  color: #303133;
+  margin-bottom: 8px;
+}
+
+.doctor-id {
+  font-size: 14px;
+  font-weight: normal;
+  color: #909399;
+  margin-left: 12px;
+}
+
+.doctor-meta {
+  display: flex;
+  gap: 10px;
+}
+
+.workbench-container {
+  height: calc(100vh - 80px);
+  padding: 20px;
+}
+
+.doctor-info-card {
+  margin-bottom: 20px;
+}
+
+.doctor-info {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.doctor-details {
+  flex: 1;
+}
+
+.doctor-name {
+  font-size: 20px;
+  font-weight: bold;
+  color: #303133;
+  margin-bottom: 8px;
+}
+
+.doctor-meta {
+  display: flex;
+  gap: 10px;
+}
+
+.stats {
+  display: flex;
+  gap: 30px;
+}
+
+.stat-item {
+  text-align: center;
+}
+
+.stat-value {
+  font-size: 28px;
+  font-weight: bold;
+  color: #409EFF;
+  line-height: 1;
+}
+
+.stat-label {
+  font-size: 12px;
+  color: #909399;
+  margin-top: 5px;
+}
+
 .full-height { height: 100%; }
 .patient-item {
   padding: 15px;
