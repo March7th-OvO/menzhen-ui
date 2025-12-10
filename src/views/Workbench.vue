@@ -307,7 +307,7 @@ const removeMedicine = (index) => {
 // 添加提交诊疗结果的方法
 const handleSubmitDiagnosis = async () => {
   console.log('当前选中患者:', currentReg.value)
-  // 更新检查逻辑，使其与渲染条件保持一致
+  // 更新检查逻辑,使其与渲染条件保持一致
   if (!currentReg.value || !(currentReg.value.regId || currentReg.value.settlement_id)) {
     ElMessage.warning('请选择患者')
     return
@@ -316,18 +316,28 @@ const handleSubmitDiagnosis = async () => {
   try {
     // 使用标准化的ID
     const regId = currentReg.value.regId || currentReg.value.settlement_id
+    const patientId = currentReg.value.patientId || currentReg.value.patient_id
 
-    await submitDiagnosis({
-      regId: regId,
-      doctorId: doctorId,
+    // 准备提交的数据,将所有ID转换为字符串
+    const submitData = {
+      regId: String(regId),
+      patientId: String(patientId),
+      doctorId: String(doctorId),
       description: diagnosisForm.description,
       diagnosis: diagnosisForm.diagnosis,
       advice: diagnosisForm.advice,
-      medicines: diagnosisForm.medicines
-    })
+      medicines: diagnosisForm.medicines.map(med => ({
+        ...med,
+        medId: String(med.medId),
+        quantity: Number(med.quantity)
+      }))
+    }
+
+    console.log('提交的数据:', submitData)
+    await submitDiagnosis(submitData)
 
     ElMessage.success('诊疗结果提交成功')
-    // 提交成功后刷新患者列表
+    // 提交成功后刷新患者列表，确保状态同步
     await refreshPatients()
     // 清空当前选中患者和表单
     currentReg.value = {}
@@ -337,7 +347,14 @@ const handleSubmitDiagnosis = async () => {
     diagnosisForm.medicines = []
   } catch (error) {
     console.error('提交诊疗结果失败:', error)
-    ElMessage.error('提交诊疗结果失败: ' + (error.message || '未知错误'))
+    ElMessageBox.alert(
+      error.message || '未知错误',
+      '提交失败',
+      {
+        confirmButtonText: '确定',
+        type: 'error',
+      }
+    )
   }
 }
 

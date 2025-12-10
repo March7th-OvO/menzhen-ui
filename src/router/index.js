@@ -10,8 +10,9 @@ const routes = [
     {
         path: '/',
         component: Layout,
-        redirect: '/registration',
+        redirect: '/welcome',
         children: [
+            { path: 'welcome', component: () => import('../views/Welcome.vue'), meta: { title: '欢迎' } },
             { path: 'registration', component: () => import('../views/Registration.vue'), meta: { title: '门诊挂号' } },
             { path: 'workbench', component: () => import('../views/Workbench.vue'), meta: { title: '医生工作台' } },
             { path: 'medicine', component: () => import('../views/MedicineMgr.vue'), meta: { title: '药房管理' } },
