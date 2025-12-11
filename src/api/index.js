@@ -7,6 +7,7 @@ export const verifyUserInfo = (data) => request.post('/user/verify-user-info', d
 
 // 挂号相关
 export const getPatientInfo = (idCard) => request.get(`/patient/info/${idCard}`)
+export const getPatientInfoById = (patientId) => request.get(`/patient/info-by-id/${patientId}`)
 export const addPatient = (data) => request.post('/patient/add', data)
 // 获取科室列表
 export const getDepts = async () => {
@@ -46,6 +47,8 @@ export const getDeptById = async (deptId) => {
 export const getDoctors = (deptId) => request.get(`/doctor/list-available?deptId=${deptId}`)
 export const getLevels = () => request.get('/reg-level/list')
 export const createRegistration = (data) => request.post('/registration/create', data)
+export const getAllRegistrations = () => request.get('/registration/list')
+export const getRegistrationNames = (patientId, doctorId) => request.get(`/registration/names?patientId=${patientId}&doctorId=${doctorId}`)
 
 // 医生工作台
 export const getPendingPatients = (doctorId) => request.get(`/doctor/workbench/pending?doctorId=${doctorId}`)
