@@ -208,10 +208,22 @@ const handleLogin = async () => {
   try {
     const res = await login(loginForm.value)
     if (!res.token) throw new Error('无Token')
+
+    // 根据"记住我"选项决定是否保存登录信息
+    if (rememberMe.value) {
+      localStorage.setItem('rememberMe', 'true');
+      localStorage.setItem('savedUsername', loginForm.value.username);
+      localStorage.setItem('savedPassword', loginForm.value.password);
+    } else {
+      // 如果未选择记住我，则清除之前保存的信息
+      localStorage.removeItem('rememberMe');
+      localStorage.removeItem('savedUsername');
+      localStorage.removeItem('savedPassword');
+    }
+
     localStorage.setItem('token', res.token)
     localStorage.setItem('user', JSON.stringify(res))
     ElMessage.success('欢迎回来，登录成功')
-    // 确保路由跳转正确执行
     await router.push('/')
   } catch (e) {
     ElMessage.error('登录失败：' + (e.message || '网络错误'))
@@ -262,6 +274,25 @@ const handleRoleChange = (val) => {
 
 onMounted(async () => {
   try {
+    const res = await getDepts()
+    deptList.value = res || []
+  } catch(e) { console.error(e) }
+})
+
+onMounted(async () => {
+  try {
+    // 恢复记住我状态和保存的登录信息
+    const savedRememberMe = localStorage.getItem('rememberMe') === 'true';
+    rememberMe.value = savedRememberMe;
+
+    // 如果用户选择了记住我，则恢复保存的用户名和密码
+    if (savedRememberMe) {
+      const savedUsername = localStorage.getItem('savedUsername') || '';
+      const savedPassword = localStorage.getItem('savedPassword') || '';
+      loginForm.value.username = savedUsername;
+      loginForm.value.password = savedPassword;
+    }
+
     const res = await getDepts()
     deptList.value = res || []
   } catch(e) { console.error(e) }
