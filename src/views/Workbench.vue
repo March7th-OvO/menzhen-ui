@@ -114,6 +114,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { getPendingPatients, searchMedicines, submitDiagnosis, getDoctorInfoByUserId, getDeptById } from '../api'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import request from '../utils/request'
 
 // 获取当前登录用户信息
 const currentUser = JSON.parse(localStorage.getItem('user') || '{}')
@@ -240,13 +241,29 @@ const loadDoctorInfo = async () => {
   }
 }
 
-// 搜索药品函数
 const searchMedicinesFunc = async (keyword) => {
   try {
-    medicineOptions.value = await searchMedicines(keyword)
+    // 构造查询参数
+    let url = '/medicine/search';
+    const params = [];
+
+    if (keyword) {
+      params.push(`keyword=${encodeURIComponent(keyword)}`);
+    }
+
+    // 添加状态过滤参数，只显示在售药品
+    params.push('status=1');
+
+    if (params.length > 0) {
+      url += '?' + params.join('&');
+    }
+
+    // 发起请求
+    const response = await request.get(url);
+    medicineOptions.value = response.filter(med => med.status === 1);
   } catch (error) {
-    console.error('搜索药品失败:', error)
-    medicineOptions.value = []
+    console.error('搜索药品失败:', error);
+    medicineOptions.value = [];
   }
 }
 
