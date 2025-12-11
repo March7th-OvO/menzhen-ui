@@ -169,10 +169,10 @@ const loadDoctorInfo = async () => {
     console.log('获取到的医生原始信息:', doctorData)
 
     // 提取医生基本信息
-    const extractedDoctorId = doctorData.doctorId || doctorData.id || doctorData.doctor_id
-    const extractedDeptId = doctorData.departmentId || doctorData.deptId || doctorData.dept_id
-    const extractedName = doctorData.name || doctorData.realName || doctorData.doctorName || ''
-    const extractedTitle = doctorData.title || doctorData.position || ''
+    const extractedDoctorId = doctorData.doctorId
+    const extractedDeptId = doctorData.deptId
+    const extractedName = doctorData.name || '未知姓名'
+    const extractedTitle = doctorData.title || '未知职称'
 
     console.log('提取的信息:', {
       doctorId: extractedDoctorId,
@@ -190,7 +190,7 @@ const loadDoctorInfo = async () => {
         console.log('获取到的科室信息:', deptData)
 
         // 提取科室名称
-        deptName = deptData.deptName || deptData.name || deptData.departmentName || '未知科室'
+        deptName = deptData.deptName || '未知科室'
         console.log('提取的科室名称:', deptName)
       } catch (deptError) {
         console.error('获取科室信息失败:', deptError)
@@ -262,6 +262,7 @@ const refreshPatients = async () => {
   try {
     pendingPatients.value = await getPendingPatients(doctorId)
     console.log('获取到的患者列表:', pendingPatients.value)
+    console.log('患者数量:', pendingPatients.value.length)
   } catch (error) {
     console.error('获取待诊患者失败:', error)
     ElMessage.error('获取待诊患者失败: ' + (error.message || '未知错误'))
@@ -273,6 +274,7 @@ const selectPatient = (patient) => {
   console.log('点击了患者:', patient)
   currentReg.value = patient
   console.log('当前选中患者更新为:', currentReg.value)
+  console.log('患者的所有属性:', Object.keys(patient))
 }
 
 
@@ -313,27 +315,38 @@ const handleSubmitDiagnosis = async () => {
     return
   }
 
+  // 检查必填字段
+  if (!diagnosisForm.description || !diagnosisForm.diagnosis) {
+    ElMessage.warning('主诉和初步诊断不能为空')
+    return
+  }
+
   try {
     // 使用标准化的ID
-    const regId = currentReg.value.regId || currentReg.value.settlement_id
-    const patientId = currentReg.value.patientId || currentReg.value.patient_id
+    const regId = currentReg.value.reg_id
+    const patientId = currentReg.value.patient_id
 
-    // 准备提交的数据,将所有ID转换为字符串
+    // 准备提交的数据,严格按照后端 DiagnosisDTO 格式
     const submitData = {
-      regId: String(regId),
-      patientId: String(patientId),
-      doctorId: String(doctorId),
+      regId: Number(regId),           // 后端期望的是 Long 类型
+      patientId: Number(patientId),   // 后端期望的是 Long 类型
+      doctorId: Number(doctorId),     // 后端期望的是 Long 类型
       description: diagnosisForm.description,
       diagnosis: diagnosisForm.diagnosis,
       advice: diagnosisForm.advice,
       medicines: diagnosisForm.medicines.map(med => ({
-        ...med,
-        medId: String(med.medId),
-        quantity: Number(med.quantity)
+        medId: Number(med.medId),         // 后端期望的是 Long 类型
+        medName: med.medName,
+        price: med.price,                 // 后端期望的是 BigDecimal 类型
+        quantity: Number(med.quantity),   // 后端期望的是 Integer 类型
+        usageInfo: med.usageInfo
       }))
     }
 
-    console.log('提交的数据:', submitData)
+    console.log('提交的数据:', JSON.stringify(submitData, null, 2))
+    console.log('当前医生ID:', doctorId)
+    console.log('当前用户:', currentUser)
+
     await submitDiagnosis(submitData)
 
     ElMessage.success('诊疗结果提交成功')
@@ -347,14 +360,29 @@ const handleSubmitDiagnosis = async () => {
     diagnosisForm.medicines = []
   } catch (error) {
     console.error('提交诊疗结果失败:', error)
-    ElMessageBox.alert(
-      error.message || '未知错误',
-      '提交失败',
-      {
-        confirmButtonText: '确定',
-        type: 'error',
-      }
-    )
+
+    // 特殊处理挂号状态错误
+    if (error.message && error.message.includes('未能更新挂号状态')) {
+      ElMessageBox.alert(
+          '该患者的挂号记录可能已被处理或不存在，请刷新患者列表后重试',
+          '提交失败',
+          {
+            confirmButtonText: '确定',
+            type: 'warning',
+          }
+      )
+      // 刷新患者列表以同步最新状态
+      await refreshPatients()
+    } else {
+      ElMessageBox.alert(
+          error.message || '未知错误',
+          '提交失败',
+          {
+            confirmButtonText: '确定',
+            type: 'error',
+          }
+      )
+    }
   }
 }
 
