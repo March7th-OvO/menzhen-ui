@@ -2,6 +2,8 @@ import request from '../utils/request'
 
 export const login = (data) => request.post('/user/login', data)
 export const register = (data) => request.post('/user/register', data)
+export const resetPassword = (data) => request.post('/user/reset-password', data)
+export const verifyUserInfo = (data) => request.post('/user/verify-user-info', data)
 
 // 挂号相关
 export const getPatientInfo = (idCard) => request.get(`/patient/info/${idCard}`)
