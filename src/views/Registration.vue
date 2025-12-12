@@ -1,135 +1,185 @@
 <template>
-  <div class="page-container">
-    <el-row :gutter="20">
+  <div class="page-container fade-in">
+    <el-row :gutter="24">
+      <!-- 左侧：挂号列表 -->
       <el-col :span="8">
-        <el-card class="registrations-list">
+        <el-card class="glass-card list-card" :body-style="{ padding: '0px', display: 'flex', flexDirection: 'column', height: '100%' }">
           <template #header>
-            <div class="card-header">
-              <span>📋 挂号列表</span>
+            <div class="card-header glass-header">
+              <span class="header-title">
+                <el-icon class="header-icon"><List /></el-icon> 挂号列表
+              </span>
+              <span class="header-badge">{{ registrations.length }}</span>
             </div>
           </template>
-          <div class="registration-item" 
-               v-for="reg in registrations" 
-               :key="reg.regId"
-               @click="selectRegistration(reg)"
-               :class="{ active: currentRegistration && currentRegistration.regId === reg.regId }">
-            <div class="reg-header">
-              <div class="reg-patient">
-                <el-tag :type="getStatusType(reg.status)" effect="dark" size="small">
-                  {{ getStatusText(reg.status) }}
-                </el-tag>
-                <span class="patient-name">{{ getPatientName(reg.patientId) }}</span>
-                <span class="patient-age">({{ getPatientGender(reg.patientId) }} {{ getPatientAge(reg.patientId) }}岁)</span>
+
+          <div class="registrations-scroll-area">
+            <div class="registrations-inner-padding">
+              <div class="registration-item"
+                   v-for="reg in registrations"
+                   :key="reg.regId"
+                   @click="selectRegistration(reg)"
+                   :class="{ active: currentRegistration && currentRegistration.regId === reg.regId }">
+
+                <div class="reg-glass-content">
+                  <div class="reg-header">
+                    <div class="reg-patient">
+                      <div class="status-dot" :class="getStatusClass(reg.status)"></div>
+                      <span class="patient-name">{{ getPatientName(reg.patientId) }}</span>
+                      <span class="patient-age">{{ getPatientGender(reg.patientId) }} · {{ getPatientAge(reg.patientId) }}岁</span>
+                    </div>
+                    <div class="reg-id">#{{ reg.regId }}</div>
+                  </div>
+
+                  <div class="reg-body">
+                    <div class="reg-info-row">
+                      <span class="info-label">科室</span>
+                      <span class="info-value">{{ getDeptName(reg.deptId) }}</span>
+                    </div>
+                    <div class="reg-info-row">
+                      <span class="info-label">医生</span>
+                      <span class="info-value">{{ getDoctorName(reg.doctorId) }}</span>
+                    </div>
+                    <div class="reg-divider"></div>
+                    <div class="reg-footer">
+                      <span class="reg-tag">{{ getLevelName(reg.levelId) }}</span>
+                      <span class="reg-fee">￥{{ reg.fee }}</span>
+                    </div>
+                  </div>
+                </div>
               </div>
-              <div class="reg-id">挂号ID: {{ reg.regId }}</div>
-            </div>
-            
-            <div class="reg-body">
-              <div class="reg-doctor-info">
-                <div class="reg-dept">{{ getDeptName(reg.deptId) }}</div>
-                <div class="reg-doctor">主治医生: {{ getDoctorName(reg.doctorId) }}</div>
-              </div>
-              
-              <div class="reg-details">
-                <div class="reg-level">级别: {{ getLevelName(reg.levelId) }}</div>
-                <div class="reg-fee">费用: ￥{{ reg.fee }}</div>
-                <div class="reg-date">时间: {{ formatDate(reg.regDate) }} {{ reg.regTimeSlot }}</div>
-              </div>
+
+              <el-empty v-if="registrations.length === 0" description="暂无挂号记录" :image-size="100" />
             </div>
           </div>
-          <el-empty v-if="registrations.length === 0" description="暂无挂号记录" />
         </el-card>
       </el-col>
-      
+
+      <!-- 右侧：挂号操作台 -->
       <el-col :span="16">
-        <el-card class="box-card">
+        <el-card class="glass-card action-card" :body-style="{ padding: '20px', height: '100%', overflowY: 'auto' }">
           <template #header>
-            <div class="card-header">
-              <span>📅 门诊挂号</span>
+            <div class="card-header glass-header">
+              <span class="header-title">
+                <el-icon class="header-icon"><Calendar /></el-icon> 门诊挂号
+              </span>
             </div>
           </template>
 
-          <div class="step-box">
-            <el-input
-                v-model="idCardSearch"
-                placeholder="输入身份证号回车查询"
-                class="search-input"
-                @keyup.enter="searchPatient"
-            >
-              <template #append><el-button icon="Search" @click="searchPatient" /></template>
-            </el-input>
-          </div>
-
-          <div v-if="patient.patientId" class="patient-info">
-            <el-descriptions title="患者信息" border>
-              <el-descriptions-item label="姓名">{{ patient.name }}</el-descriptions-item>
-              <el-descriptions-item label="性别">{{ patient.gender }}</el-descriptions-item>
-              <el-descriptions-item label="年龄">{{ patient.age }}</el-descriptions-item>
-              <el-descriptions-item label="电话">{{ patient.phone }}</el-descriptions-item>
-            </el-descriptions>
-          </div>
-
-          <el-form v-if="patient.patientId" :model="regForm" label-width="100px" style="margin-top: 20px;">
-            <el-row :gutter="20">
-              <el-col :span="8">
-                <el-form-item label="选择科室">
-                  <el-select v-model="regForm.deptId" placeholder="请选择科室" @change="handleDeptChange">
-                    <el-option
-                        v-for="d in depts"
-                        :key="d.id"
-                        :label="`${d.code} - ${d.name}`"
-                        :value="d.id"
-                    />
-                  </el-select>
-                </el-form-item>
-              </el-col>
-              <el-col :span="8">
-                <el-form-item label="选择医生">
-                  <el-select v-model="regForm.doctorId" placeholder="请选择医生">
-                    <el-option v-for="doc in doctors" :key="doc.doctorId" :label="doc.name" :value="doc.doctorId" />
-                  </el-select>
-                </el-form-item>
-              </el-col>
-              <el-col :span="8">
-                <el-form-item label="挂号级别">
-                  <el-select v-model="regForm.levelId" placeholder="选择级别">
-                    <el-option v-for="l in levels" :key="l.levelId" :label="l.levelName + ' (￥' + l.fee + ')'" :value="l.levelId" />
-                  </el-select>
-                </el-form-item>
-              </el-col>
-            </el-row>
-            <div style="text-align: right;">
-              <el-button type="primary" size="large" @click="submitReg">确认挂号</el-button>
+          <div class="action-card-content">
+            <div class="step-box">
+              <div class="search-wrapper">
+                <el-input
+                    v-model="idCardSearch"
+                    placeholder="请输入身份证号查询..."
+                    class="glass-input search-input"
+                    @keyup.enter="searchPatient"
+                    prefix-icon="Search"
+                    clearable
+                >
+                  <template #append>
+                    <el-button icon="Search" @click="searchPatient" class="glass-append-btn" />
+                  </template>
+                </el-input>
+              </div>
             </div>
-          </el-form>
 
-          <el-empty v-else description="请先查询或建档患者信息">
-            <el-button type="primary" @click="dialogVisible = true">新建患者档案</el-button>
-          </el-empty>
+            <transition name="el-fade-in-linear">
+              <div v-if="patient.patientId" class="patient-details-glass">
+                <div class="details-title">患者档案</div>
+                <div class="details-grid">
+                  <div class="detail-item">
+                    <label>姓名</label>
+                    <span>{{ patient.name }}</span>
+                  </div>
+                  <div class="detail-item">
+                    <label>性别</label>
+                    <span>{{ patient.gender }}</span>
+                  </div>
+                  <div class="detail-item">
+                    <label>年龄</label>
+                    <span>{{ patient.age }}</span>
+                  </div>
+                  <div class="detail-item">
+                    <label>电话</label>
+                    <span>{{ patient.phone }}</span>
+                  </div>
+                </div>
+              </div>
+            </transition>
+
+            <transition name="el-zoom-in-top">
+              <el-form v-if="patient.patientId" :model="regForm" label-position="top" class="glass-form" style="margin-top: 25px;">
+                <el-row :gutter="24">
+                  <el-col :span="8" style="height: auto;"> <!-- 内部表单的col不需要强制100%高度 -->
+                    <el-form-item label="选择科室">
+                      <el-select v-model="regForm.deptId" placeholder="请选择科室" @change="handleDeptChange" class="glass-select" popper-class="glass-popper">
+                        <el-option
+                            v-for="d in depts"
+                            :key="d.id"
+                            :label="`${d.code} - ${d.name}`"
+                            :value="d.id"
+                        />
+                      </el-select>
+                    </el-form-item>
+                  </el-col>
+                  <el-col :span="8" style="height: auto;">
+                    <el-form-item label="选择医生">
+                      <el-select v-model="regForm.doctorId" placeholder="请选择医生" class="glass-select" popper-class="glass-popper">
+                        <el-option v-for="doc in doctors" :key="doc.doctorId" :label="doc.name" :value="doc.doctorId" />
+                      </el-select>
+                    </el-form-item>
+                  </el-col>
+                  <el-col :span="8" style="height: auto;">
+                    <el-form-item label="挂号级别">
+                      <el-select v-model="regForm.levelId" placeholder="选择级别" class="glass-select" popper-class="glass-popper">
+                        <el-option v-for="l in levels" :key="l.levelId" :label="l.levelName + ' (￥' + l.fee + ')'" :value="l.levelId" />
+                      </el-select>
+                    </el-form-item>
+                  </el-col>
+                </el-row>
+
+                <div class="form-actions">
+                  <el-button type="primary" size="large" @click="submitReg" class="glass-btn-primary">
+                    确认挂号
+                  </el-button>
+                </div>
+              </el-form>
+            </transition>
+
+            <div v-if="!patient.patientId" class="empty-placeholder">
+              <el-empty description="请先查询或建档患者信息" :image-size="140">
+                <el-button class="glass-btn-outline" @click="dialogVisible = true">
+                  <el-icon style="margin-right: 5px"><Plus /></el-icon> 新建患者档案
+                </el-button>
+              </el-empty>
+            </div>
+          </div>
         </el-card>
       </el-col>
     </el-row>
 
-    <el-dialog v-model="dialogVisible" title="新建患者档案" width="500px">
-      <el-form :model="newPatient" label-width="80px">
-        <el-form-item label="姓名"><el-input v-model="newPatient.name" /></el-form-item>
-        <el-form-item label="身份证"><el-input v-model="newPatient.idCard" /></el-form-item>
+    <!-- 弹窗也需要拟态化，通过 CSS 覆盖 -->
+    <el-dialog v-model="dialogVisible" title="新建患者档案" width="500px" class="glass-dialog" center destroy-on-close>
+      <el-form :model="newPatient" label-width="80px" class="dialog-form">
+        <el-form-item label="姓名"><el-input v-model="newPatient.name" class="glass-input-sm" /></el-form-item>
+        <el-form-item label="身份证"><el-input v-model="newPatient.idCard" class="glass-input-sm" /></el-form-item>
         <el-form-item label="性别">
           <el-radio-group v-model="newPatient.gender">
             <el-radio label="男">男</el-radio>
             <el-radio label="女">女</el-radio>
           </el-radio-group>
         </el-form-item>
-        <el-form-item label="年龄"><el-input-number v-model="newPatient.age" /></el-form-item>
+        <el-form-item label="年龄"><el-input-number v-model="newPatient.age" class="glass-input-sm" /></el-form-item>
         <el-form-item label="出生日期">
-          <el-date-picker v-model="newPatient.birthDate" type="date" value-format="YYYY-MM-DD" placeholder="选择日期"/>
+          <el-date-picker v-model="newPatient.birthDate" type="date" value-format="YYYY-MM-DD" placeholder="选择日期" class="glass-input-sm"/>
         </el-form-item>
-        <el-form-item label="电话"><el-input v-model="newPatient.phone" /></el-form-item>
-        <el-form-item label="地址"><el-input v-model="newPatient.address" /></el-form-item>
+        <el-form-item label="电话"><el-input v-model="newPatient.phone" class="glass-input-sm" /></el-form-item>
+        <el-form-item label="地址"><el-input v-model="newPatient.address" class="glass-input-sm" /></el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="handleCreatePatient">保存</el-button>
+        <el-button @click="dialogVisible = false" class="glass-btn-default">取消</el-button>
+        <el-button type="primary" @click="handleCreatePatient" class="glass-btn-primary">保存</el-button>
       </template>
     </el-dialog>
   </div>
@@ -139,6 +189,7 @@
 import { ref, onMounted, reactive, computed } from 'vue'
 import { getPatientInfo, getPatientInfoById, addPatient, getDepts, getDoctors, getLevels, createRegistration, getAllRegistrations, getRegistrationNames } from '../api'
 import { ElMessage, ElNotification } from 'element-plus'
+import { List, Calendar, Search, Plus } from '@element-plus/icons-vue'
 
 const idCardSearch = ref('')
 const patient = ref({})
@@ -172,37 +223,36 @@ const newPatient = reactive({
 onMounted(async () => {
   depts.value = await getDepts()
   levels.value = await getLevels()
-  
+
   // 构建科室映射
   deptMap.value = {}
   depts.value.forEach(dept => {
     deptMap.value[dept.id] = dept
   })
-  
+
   // 构建级别映射
   levelMap.value = {}
   levels.value.forEach(level => {
     levelMap.value[level.levelId] = level
   })
-  
+
   loadRegistrations()
 })
 
 const loadRegistrations = async () => {
   try {
     let allRegistrations = await getAllRegistrations()
-    
+
     // 只显示状态为1（已挂号）的挂号记录
     registrations.value = allRegistrations.filter(reg => reg.status === 1)
-    
+
     // 收集所有唯一的患者ID和医生ID
     const uniquePatientIds = [...new Set(registrations.value.map(r => r.patientId))]
     const uniqueDoctorIds = [...new Set(registrations.value.map(r => r.doctorId))]
-    
+
     // 批量获取患者详细信息
     await Promise.all(uniquePatientIds.map(async (patientId) => {
       try {
-        // 获取患者详细信息
         const patientDetails = await getPatientInfoById(patientId)
         patientMap.value[patientId] = {
           name: patientDetails.name,
@@ -211,7 +261,6 @@ const loadRegistrations = async () => {
         }
       } catch (error) {
         console.error(`获取患者${patientId}信息失败:`, error)
-        // 设置默认值
         patientMap.value[patientId] = {
           name: `患者${patientId}`,
           gender: '未知',
@@ -219,16 +268,13 @@ const loadRegistrations = async () => {
         }
       }
     }))
-    
+
     // 批量获取患者和医生姓名
     await Promise.all(uniqueDoctorIds.map(async (doctorId) => {
       try {
-        // 查找与此医生ID关联的任何挂号记录，以获取患者ID
         const regWithDoctor = registrations.value.find(r => r.doctorId === doctorId)
         if (regWithDoctor) {
           const names = await getRegistrationNames(regWithDoctor.patientId, doctorId)
-          
-          // 更新医生信息
           if (names.doctorName && !doctorMap.value[doctorId]) {
             doctorMap.value[doctorId] = {
               name: names.doctorName,
@@ -238,14 +284,13 @@ const loadRegistrations = async () => {
         }
       } catch (error) {
         console.error(`获取医生${doctorId}信息失败:`, error)
-        // 设置默认值
         doctorMap.value[doctorId] = {
           name: `医生${doctorId}`,
           deptId: ''
         }
       }
     }))
-    
+
   } catch (error) {
     ElMessage.error('获取挂号列表失败: ' + error.message)
   }
@@ -266,7 +311,6 @@ const handleCreatePatient = async () => {
   try {
     const res = await addPatient(newPatient)
     if (res && res.patientId) {
-      // 创建成功后，主动查询一次以验证数据是否真的被保存了
       const verifiedPatient = await getPatientInfo(res.idCard)
       if (verifiedPatient) {
         patient.value = verifiedPatient
@@ -288,8 +332,6 @@ const handleCreatePatient = async () => {
 const handleDeptChange = async (val) => {
   regForm.doctorId = null
   doctors.value = await getDoctors(val)
-  
-  // 更新医生映射
   doctors.value.forEach(doctor => {
     doctorMap.value[doctor.doctorId] = doctor
   })
@@ -306,11 +348,9 @@ const submitReg = async () => {
 
   await createRegistration(payload)
   ElNotification.success({ title: '挂号成功', message: `患者 ${patient.value.name} 已挂号` })
-  
-  // 重新加载挂号列表
+
   await loadRegistrations()
-  
-  // 重置
+
   patient.value = {}
   idCardSearch.value = ''
   regForm.deptId = null
@@ -320,128 +360,196 @@ const selectRegistration = (reg) => {
   currentRegistration.value = reg
 }
 
-// 获取状态文本
-const getStatusText = (status) => {
+// 辅助样式类方法
+const getStatusClass = (status) => {
   switch(status) {
-    case 1: return '已挂号'
-    case 2: return '已问诊'
-    case 3: return '已退号'
-    case 4: return '已作废'
-    default: return '未知'
+    case 1: return 'status-primary'
+    case 2: return 'status-success'
+    case 3: return 'status-warning'
+    case 4: return 'status-danger'
+    default: return 'status-info'
   }
 }
 
-// 获取状态标签类型
-const getStatusType = (status) => {
-  switch(status) {
-    case 1: return 'primary'  // 已挂号 - 蓝色
-    case 2: return 'success'  // 已问诊 - 绿色
-    case 3: return 'warning'  // 已退号 - 橙色
-    case 4: return 'danger'   // 已作废 - 红色
-    default: return 'info'    // 未知 - 灰色
-  }
-}
-
-// 获取患者姓名
 const getPatientName = (patientId) => {
-  // 如果已经有缓存的患者信息，直接返回姓名
   if (patientMap.value[patientId]) {
     return patientMap.value[patientId].name
   }
-  
-  // 否则返回默认值
   return `患者${patientId}`
 }
 
-// 获取患者性别
 const getPatientGender = (patientId) => {
-  // 如果已经有缓存的患者信息，直接返回性别
   if (patientMap.value[patientId]) {
     return patientMap.value[patientId].gender
   }
-  
-  // 否则返回默认值
   return '未知'
 }
 
-// 获取患者年龄
 const getPatientAge = (patientId) => {
-  // 如果已经有缓存的患者信息，直接返回年龄
   if (patientMap.value[patientId]) {
     return patientMap.value[patientId].age
   }
-  
-  // 否则返回默认值
   return '未知'
 }
 
-// 获取医生姓名
 const getDoctorName = (doctorId) => {
-  // 如果已经有缓存的医生信息，直接返回姓名
   if (doctorMap.value[doctorId]) {
     return doctorMap.value[doctorId].name
   }
-  
-  // 否则返回默认值
   return `医生${doctorId}`
 }
 
-// 获取科室名称
 const getDeptName = (deptId) => {
   return deptMap.value[deptId]?.name || `科室${deptId}`
 }
 
-// 获取级别名称
 const getLevelName = (levelId) => {
   return levelMap.value[levelId]?.levelName || `级别${levelId}`
 }
 
-// 格式化日期
 const formatDate = (dateString) => {
   return dateString
-}
-
-// 格式化日期时间
-const formatDateTime = (dateString) => {
-  const date = new Date(dateString)
-  return `${date.getFullYear()}-${(date.getMonth()+1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')} ${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`
 }
 </script>
 
 <style scoped>
-.search-input { width: 400px; margin-bottom: 20px; }
-.patient-info { margin-bottom: 20px; border-left: 5px solid #409EFF; padding-left: 10px; }
+/* 全局设计语言：
+  Glassmorphism (毛玻璃) + Neumorphism (拟态/软UI)
+  主色调：#6c5ce7 (与 Layout 保持一致)
+*/
 
-.registrations-list {
-  max-height: calc(100vh - 120px);
-  overflow-y: auto;
+.page-container {
+  padding: 10px;
+  height: 100%;
+  box-sizing: border-box;
+  display: flex; /* 改为 flex 布局 */
+  flex-direction: column;
+}
+
+/* 强制 el-row 占满剩余空间 */
+.page-container > .el-row {
+  flex: 1;
+  height: 100%; /* 关键：让 row 高度撑开 */
+}
+
+/* 强制 el-col 占满高度 */
+.page-container :deep(.el-col) {
+  height: 100%;
+}
+
+/* =========================================
+   Glass Card (玻璃卡片容器)
+========================================= */
+:deep(.glass-card) {
+  background: rgba(255, 255, 255, 0.45);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  border-radius: 24px;
+  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
+  overflow: hidden;
+  transition: transform 0.3s ease;
+  height: 100%;
+  display: flex; /* 让卡片内容也 flex 布局 */
+  flex-direction: column;
+}
+
+/* 强制卡片内容区占满并处理滚动 */
+:deep(.el-card__body) {
+  flex: 1;
+  overflow: hidden; /* 防止双重滚动条 */
+  display: flex;
+  flex-direction: column;
+}
+
+:deep(.el-card__header) {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.5);
+  padding: 15px 20px;
+  flex-shrink: 0; /* 防止 header 被压缩 */
+}
+
+.glass-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.header-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #2d3436;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.header-icon {
+  color: #6c5ce7;
+  font-size: 20px;
+}
+
+.header-badge {
+  background: rgba(108, 92, 231, 0.1);
+  color: #6c5ce7;
+  padding: 2px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+/* =========================================
+   左侧：挂号列表 (3D 胶囊风格)
+========================================= */
+.registrations-scroll-area {
+  flex: 1; /* 自动占据剩余空间 */
+  overflow-y: auto; /* 内部滚动 */
+  /* 移除固定的 max-height */
+}
+
+.registrations-inner-padding {
+  padding: 10px; /* 将 padding 移到内部容器 */
 }
 
 .registration-item {
-  padding: 15px;
-  border: 1px solid #ebeef5;
-  border-radius: 8px;
-  margin-bottom: 12px;
+  margin-bottom: 16px;
+  border-radius: 16px;
   cursor: pointer;
-  transition: all 0.3s;
-  background-color: #fff;
+  transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+  position: relative;
+
+  /* 默认状态：半透明玻璃 */
+  background: rgba(255, 255, 255, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.5);
 }
 
+.reg-glass-content {
+  padding: 16px;
+}
+
+/* Hover: 上浮 + 投影 */
 .registration-item:hover {
-  border-color: #409EFF;
-  box-shadow: 0 2px 12px 0 rgba(64, 158, 255, 0.3);
+  transform: translateY(-4px) scale(1.02);
+  background: rgba(255, 255, 255, 0.7);
+  box-shadow:
+      0 10px 20px rgba(0, 0, 0, 0.05),
+      0 4px 6px rgba(0, 0, 0, 0.02);
+  z-index: 10;
 }
 
+/* Active: 拟态内陷 / 激活光晕 */
 .registration-item.active {
-  border-color: #409EFF;
-  background-color: #ecf5ff;
+  background: rgba(255, 255, 255, 0.9);
+  border-color: #6c5ce7;
+  /* 混合投影：外部柔和发光 */
+  box-shadow: 0 0 0 1px #6c5ce7, 0 8px 20px rgba(108, 92, 231, 0.15);
 }
 
+/* 列表内部排版 */
 .reg-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 10px;
+  margin-bottom: 12px;
 }
 
 .reg-patient {
@@ -451,53 +559,206 @@ const formatDateTime = (dateString) => {
 }
 
 .patient-name {
-  font-weight: bold;
+  font-weight: 600;
   font-size: 16px;
+  color: #2d3436;
 }
 
 .patient-age {
-  color: #606266;
-  font-size: 14px;
+  font-size: 12px;
+  color: #636e72;
 }
 
 .reg-id {
-  color: #909399;
+  font-size: 12px;
+  color: #b2bec3;
+  font-family: monospace;
+}
+
+/* 状态小圆点 */
+.status-dot { width: 8px; height: 8px; border-radius: 50%; }
+.status-primary { background: #6c5ce7; box-shadow: 0 0 8px #6c5ce7; }
+.status-success { background: #00b894; }
+.status-warning { background: #fdcb6e; }
+.status-danger  { background: #ff7675; }
+
+.reg-info-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 6px;
+  font-size: 13px;
+}
+
+.info-label { color: #888; }
+.info-value { color: #2d3436; font-weight: 500; }
+
+.reg-divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(0,0,0,0.05), transparent);
+  margin: 10px 0;
+}
+
+.reg-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.reg-tag {
+  background: rgba(108, 92, 231, 0.1);
+  color: #6c5ce7;
+  padding: 2px 8px;
+  border-radius: 6px;
   font-size: 12px;
 }
 
-.reg-body {
-  display: flex;
-  justify-content: space-between;
-}
-
-.reg-doctor-info {
-  flex: 1;
-}
-
-.reg-dept {
-  font-weight: bold;
-  color: #303133;
-  margin-bottom: 5px;
-}
-
-.reg-doctor {
-  color: #606266;
-  font-size: 14px;
-  margin-bottom: 5px;
-}
-
-.reg-details {
-  text-align: right;
-}
-
-.reg-level, .reg-fee, .reg-date {
-  color: #606266;
-  font-size: 13px;
-  margin-bottom: 3px;
-}
-
 .reg-fee {
+  font-size: 16px;
   font-weight: bold;
-  color: #e6a23c;
+  color: #6c5ce7;
 }
+
+/* =========================================
+   右侧：表单与拟态输入框
+========================================= */
+.search-wrapper {
+  margin: 20px 0 30px 0;
+  display: flex;
+  justify-content: center;
+}
+
+.search-input {
+  width: 100%;
+  max-width: 500px;
+}
+
+/* 拟态输入框样式 (Neumorphic Input) */
+:deep(.glass-input .el-input__wrapper),
+:deep(.glass-select .el-select__wrapper),
+:deep(.glass-input-sm .el-input__wrapper) {
+  background: rgba(240, 245, 255, 0.6); /* 浅色背景 */
+  box-shadow: inset 2px 2px 6px rgba(163, 177, 198, 0.3),
+  inset -2px -2px 6px rgba(255, 255, 255, 0.8);
+  border-radius: 12px;
+  border: none;
+  padding: 8px 15px;
+  transition: all 0.3s;
+}
+
+:deep(.glass-input .el-input__wrapper.is-focus),
+:deep(.glass-select .el-select__wrapper.is-focused) {
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 0 0 2px rgba(108, 92, 231, 0.3),
+  inset 2px 2px 6px rgba(163, 177, 198, 0.1);
+}
+
+:deep(.el-input-group__append) {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+}
+
+.glass-append-btn {
+  border-radius: 0 12px 12px 0;
+  color: #6c5ce7;
+}
+
+/* 患者信息卡片 (Glass Panel) */
+.patient-details-glass {
+  background: rgba(255, 255, 255, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  border-radius: 16px;
+  padding: 20px;
+  margin-bottom: 20px;
+  position: relative;
+  overflow: hidden;
+}
+
+.patient-details-glass::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 4px;
+  background: #6c5ce7;
+}
+
+.details-title {
+  font-size: 14px;
+  color: #6c5ce7;
+  font-weight: bold;
+  margin-bottom: 15px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.details-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+}
+
+.detail-item label {
+  display: block;
+  font-size: 12px;
+  color: #888;
+  margin-bottom: 4px;
+}
+
+.detail-item span {
+  font-size: 16px;
+  color: #2d3436;
+  font-weight: 600;
+}
+
+/* 按钮样式 */
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 30px;
+}
+
+.glass-btn-primary {
+  background: linear-gradient(135deg, #6c5ce7, #a29bfe);
+  border: none;
+  border-radius: 12px;
+  box-shadow: 0 4px 15px rgba(108, 92, 231, 0.4);
+  font-weight: 600;
+  padding: 12px 30px;
+  transition: transform 0.2s;
+}
+
+.glass-btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(108, 92, 231, 0.5);
+  background: linear-gradient(135deg, #7b6bed, #b0aafc);
+}
+
+.glass-btn-outline {
+  background: transparent;
+  border: 2px solid #6c5ce7;
+  color: #6c5ce7;
+  border-radius: 12px;
+  font-weight: 600;
+}
+
+.glass-btn-outline:hover {
+  background: rgba(108, 92, 231, 0.1);
+}
+
+/* 下拉菜单 Popper 样式 */
+:global(.glass-popper.el-select__popper) {
+  background: rgba(255, 255, 255, 0.8) !important;
+  backdrop-filter: blur(16px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.8) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.1) !important;
+}
+
+:global(.glass-popper .el-select-dropdown__item.hover),
+:global(.glass-popper .el-select-dropdown__item:hover) {
+  background: rgba(108, 92, 231, 0.1) !important;
+  color: #6c5ce7 !important;
+  border-radius: 8px;
+}
+
 </style>

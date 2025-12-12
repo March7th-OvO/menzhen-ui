@@ -1,123 +1,179 @@
 <template>
-  <div class="workbench-container">
-    <!-- 医生信息卡片 -->
-    <el-card class="doctor-info-card" shadow="hover">
-      <div class="doctor-info">
-        <el-avatar :size="60" icon="UserFilled" style="background-color: #409EFF;" />
-        <div class="doctor-details">
-          <div class="doctor-name">
-            {{ doctorInfo.realName +"医生" || '未知医生' }}
-            <span class="doctor-id">ID: {{ doctorInfo.doctorId || '未知' }}</span>
-          </div>
-          <div class="doctor-meta">
-            <el-tag type="primary" size="small">{{ doctorInfo.deptName || '未分配科室' }}</el-tag>
-            <el-tag type="success" size="small">{{ doctorInfo.title || '医师' }}</el-tag>
-          </div>
+  <div class="workbench-container fade-in">
+    <!-- 顶部：医生信息玻璃卡片 -->
+    <div class="doctor-info-glass">
+      <div class="doctor-profile">
+        <div class="avatar-wrapper">
+          <el-avatar :size="64" icon="UserFilled" class="glass-avatar" />
         </div>
-        <div class="stats">
-          <div class="stat-item">
-            <div class="stat-value">{{ pendingPatients.length }}</div>
-            <div class="stat-label">待诊患者</div>
+        <div class="doctor-details">
+          <div class="doctor-name-row">
+            <span class="doctor-name">{{ doctorInfo.realName || '未知医生' }}</span>
+            <span class="doctor-role-badge">医生</span>
+          </div>
+          <div class="doctor-meta-row">
+            <span class="meta-tag"><el-icon><postcard /></el-icon> ID: {{ doctorInfo.doctorId || '--' }}</span>
+            <span class="meta-separator">|</span>
+            <span class="meta-tag">{{ doctorInfo.deptName || '未分配科室' }}</span>
+            <span class="meta-separator">|</span>
+            <span class="meta-tag">{{ doctorInfo.title || '医师' }}</span>
           </div>
         </div>
       </div>
-    </el-card>
 
-    <el-row :gutter="20" style="height: calc(100% - 120px); margin-top: 20px;">
-      <el-col :span="6" class="full-height">
-        <el-card class="full-height patient-list-card" body-style="padding:0">
+      <div class="stats-glass">
+        <div class="stat-item">
+          <div class="stat-value">{{ pendingPatients.length }}</div>
+          <div class="stat-label">待诊患者</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 主体内容区 -->
+    <el-row :gutter="24" class="main-workspace-row">
+      <!-- 左侧：待诊患者列表 -->
+      <el-col :span="6" class="full-height-col">
+        <el-card class="glass-card list-card" :body-style="{ padding: '0px', display: 'flex', flexDirection: 'column', height: '100%' }">
           <template #header>
-            <div class="clearfix">
-              <span>📋 待诊患者</span>
-              <el-button style="float: right; padding: 3px 0" type="primary" link @click="refreshPatients">刷新</el-button>
+            <div class="card-header glass-header">
+              <span class="header-title">
+                <el-icon class="header-icon"><List /></el-icon> 待诊列表
+              </span>
+              <el-button link class="refresh-btn" @click="refreshPatients">
+                <el-icon :class="{ 'is-loading': false }"><Refresh /></el-icon>
+              </el-button>
             </div>
           </template>
-          <div v-for="p in pendingPatients" :key="p.regId" class="patient-item"
-               :class="{ active: currentReg.regId === p.regId }"
-               @click="selectPatient(p)">
-            <div class="p-name">{{ p.patientName }} <el-tag size="small">{{ p.gender }}</el-tag></div>
-            <div class="p-info">{{ p.age }}岁 | 挂号ID: {{ p.regId }}</div>
+
+          <div class="patient-list-scroll">
+            <div class="patient-list-inner">
+              <div v-for="p in pendingPatients" :key="p.regId" class="patient-item-glass"
+                   :class="{ active: currentReg.regId === p.regId }"
+                   @click="selectPatient(p)">
+                <div class="p-glass-content">
+                  <div class="p-header">
+                    <span class="p-name">{{ p.patientName }}</span>
+                    <el-tag size="small" :type="p.gender === '男' ? '' : 'danger'" effect="plain" class="gender-tag">
+                      {{ p.gender }}
+                    </el-tag>
+                  </div>
+                  <div class="p-meta">
+                    <span class="p-age">{{ p.age }}岁</span>
+                    <!-- 修复：明确显示挂号ID -->
+                    <span class="p-id">挂号ID: {{ p.regId }}</span>
+                  </div>
+                </div>
+                <!-- 选中时的光条装饰 -->
+                <div class="active-indicator" v-if="currentReg.regId === p.regId"></div>
+              </div>
+              <el-empty v-if="pendingPatients.length === 0" description="暂无待诊患者" :image-size="80" />
+            </div>
           </div>
-          <el-empty v-if="pendingPatients.length === 0" description="暂无待诊患者" image-size="60" />
         </el-card>
       </el-col>
 
-      <el-col :span="18" class="full-height">
-        <el-card class="full-height" v-if="currentReg && (currentReg.regId || currentReg.settlement_id)">
-          <template #header>
-            <div class="diagnosis-header">
-              <span>正在接诊：<b>{{ currentReg.patientName }}</b></span>
-              <div>
-                <el-button type="warning" @click="handleCancelRegistration" style="margin-right: 10px;">退号</el-button>
-                <el-button type="success" @click="handleSubmitDiagnosis">提交诊疗结果</el-button>
+      <!-- 右侧：诊疗工作台 -->
+      <el-col :span="18" class="full-height-col">
+        <el-card class="glass-card work-card" :body-style="{ padding: '0', height: '100%', display: 'flex', flexDirection: 'column' }">
+          <template v-if="currentReg && (currentReg.regId || currentReg.settlement_id)">
+            <div class="work-header glass-header-lg">
+              <div class="patient-status">
+                <span class="label">正在接诊</span>
+                <span class="value">{{ currentReg.patientName }}</span>
               </div>
+              <div class="action-buttons">
+                <el-button type="danger" plain class="glass-btn-danger" @click="handleCancelRegistration">
+                  退号
+                </el-button>
+                <el-button type="primary" class="glass-btn-primary" @click="handleSubmitDiagnosis">
+                  <el-icon style="margin-right:5px"><Check /></el-icon> 提交诊疗
+                </el-button>
+              </div>
+            </div>
+
+            <div class="work-content">
+              <el-tabs v-model="activeTab" class="glass-tabs">
+                <el-tab-pane label="📝 病历书写" name="record">
+                  <div class="tab-scroll-content">
+                    <el-form :model="diagnosisForm" label-position="top" class="glass-form">
+                      <el-form-item label="主诉 (Description)">
+                        <el-input v-model="diagnosisForm.description" type="textarea" rows="3" placeholder="患者哪里不舒服..." class="glass-textarea" />
+                      </el-form-item>
+                      <el-form-item label="初步诊断 (Diagnosis)">
+                        <el-input v-model="diagnosisForm.diagnosis" type="textarea" rows="3" placeholder="诊断结果..." class="glass-textarea" />
+                      </el-form-item>
+                      <el-form-item label="医嘱 (Advice)">
+                        <el-input v-model="diagnosisForm.advice" type="textarea" rows="3" placeholder="注意事项..." class="glass-textarea" />
+                      </el-form-item>
+                    </el-form>
+                  </div>
+                </el-tab-pane>
+
+                <el-tab-pane label="💊 开具处方" name="prescription">
+                  <div class="tab-scroll-content">
+                    <div class="pres-tools">
+                      <el-select
+                          v-model="selectedMedicineId"
+                          filterable
+                          remote
+                          :remote-method="searchMedicinesFunc"
+                          placeholder="搜索药品名称..."
+                          class="glass-select-lg"
+                          popper-class="glass-popper"
+                          @change="addMedicineToTable"
+                      >
+                        <el-option v-for="item in medicineOptions" :key="item.medId" :label="item.medName" :value="item.medId" />
+                      </el-select>
+                    </div>
+
+                    <div class="glass-table-wrapper">
+                      <el-table :data="diagnosisForm.medicines" style="width: 100%;" class="glass-table">
+                        <el-table-column prop="medName" label="药品名称" />
+                        <el-table-column prop="price" label="单价" width="100">
+                          <template #default="scope">
+                            <span class="price-text">￥{{ scope.row.price }}</span>
+                          </template>
+                        </el-table-column>
+                        <el-table-column label="数量" width="150">
+                          <template #default="scope">
+                            <el-input-number v-model="scope.row.quantity" :min="1" size="small" class="glass-input-number" />
+                          </template>
+                        </el-table-column>
+                        <el-table-column label="用法用量">
+                          <template #default="scope">
+                            <el-input v-model="scope.row.usageInfo" size="small" placeholder="如：一日三次" class="glass-input-sm" />
+                          </template>
+                        </el-table-column>
+                        <el-table-column label="操作" width="80" align="center">
+                          <template #default="scope">
+                            <el-button type="danger" link icon="Delete" class="delete-icon-btn" @click="removeMedicine(scope.$index)"></el-button>
+                          </template>
+                        </el-table-column>
+                      </el-table>
+                    </div>
+                  </div>
+                </el-tab-pane>
+              </el-tabs>
             </div>
           </template>
 
-          <el-tabs v-model="activeTab">
-            <el-tab-pane label="📝 病历信息" name="record">
-              <el-form :model="diagnosisForm" label-position="top">
-                <el-form-item label="主诉 (Description)">
-                  <el-input v-model="diagnosisForm.description" type="textarea" rows="3" placeholder="患者哪里不舒服..." />
-                </el-form-item>
-                <el-form-item label="初步诊断 (Diagnosis)">
-                  <el-input v-model="diagnosisForm.diagnosis" type="textarea" rows="3" placeholder="诊断结果..." />
-                </el-form-item>
-                <el-form-item label="医嘱 (Advice)">
-                  <el-input v-model="diagnosisForm.advice" type="textarea" rows="3" placeholder="注意事项..." />
-                </el-form-item>
-              </el-form>
-            </el-tab-pane>
-
-            <el-tab-pane label="💊 开具处方" name="prescription">
-              <div class="pres-tools">
-                <el-select
-                    v-model="selectedMedicineId"
-                    filterable
-                    remote
-                    :remote-method="searchMedicinesFunc"
-                    placeholder="搜索药品名称..."
-                    style="width: 300px;"
-                    @change="addMedicineToTable"
-                >
-                  <el-option v-for="item in medicineOptions" :key="item.medId" :label="item.medName" :value="item.medId" />
-                </el-select>
-              </div>
-
-              <el-table :data="diagnosisForm.medicines" stripe style="width: 100%; margin-top: 10px;">
-                <el-table-column prop="medName" label="药品名称" />
-                <el-table-column prop="price" label="单价" width="100" />
-                <el-table-column label="数量" width="150">
-                  <template #default="scope">
-                    <el-input-number v-model="scope.row.quantity" :min="1" size="small" />
-                  </template>
-                </el-table-column>
-                <el-table-column label="用法用量">
-                  <template #default="scope">
-                    <el-input v-model="scope.row.usageInfo" size="small" placeholder="如：一日三次" />
-                  </template>
-                </el-table-column>
-                <el-table-column label="操作" width="80">
-                  <template #default="scope">
-                    <el-button type="danger" link icon="Delete" @click="removeMedicine(scope.$index)"></el-button>
-                  </template>
-                </el-table-column>
-              </el-table>
-            </el-tab-pane>
-          </el-tabs>
+          <template v-else>
+            <div class="empty-state-wrapper">
+              <el-empty description="请从左侧选择一位患者开始接诊" :image-size="160" />
+            </div>
+          </template>
         </el-card>
-        <el-empty v-else description="请从左侧选择一位患者开始接诊" />
       </el-col>
     </el-row>
   </div>
 </template>
-
 
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
 import { getPendingPatients, searchMedicines, submitDiagnosis, getDoctorInfoByUserId, getDeptById } from '../api'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import request from '../utils/request'
+import { UserFilled, List, Refresh, Check, Delete, Postcard } from '@element-plus/icons-vue'
 
 // 获取当前登录用户信息
 const currentUser = JSON.parse(localStorage.getItem('user') || '{}')
@@ -458,59 +514,89 @@ const handleCancelRegistration = async () => {
 </script>
 
 <style scoped>
-.doctor-name {
-  font-size: 20px;
-  font-weight: bold;
-  color: #303133;
-  margin-bottom: 8px;
-}
-
-.doctor-id {
-  font-size: 14px;
-  font-weight: normal;
-  color: #909399;
-  margin-left: 12px;
-}
-
-.doctor-meta {
-  display: flex;
-  gap: 10px;
-}
-
+/* ================= 全局布局与色彩 ================= */
 .workbench-container {
-  height: calc(100vh - 80px);
-  padding: 20px;
+  height: 100%;
+  padding: 10px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
 }
 
-.doctor-info-card {
-  margin-bottom: 20px;
+.main-workspace-row {
+  flex: 1;
+  margin-top: 20px;
+  overflow: hidden; /* 防止溢出 */
 }
 
-.doctor-info {
+.full-height-col {
+  height: 100%;
+}
+
+/* ================= 1. 顶部医生信息 (Glass Panel) ================= */
+.doctor-info-glass {
+  background: rgba(255, 255, 255, 0.4);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  border-radius: 20px;
+  padding: 15px 30px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.05);
+}
+
+.doctor-profile {
   display: flex;
   align-items: center;
   gap: 20px;
 }
 
-.doctor-details {
-  flex: 1;
+.glass-avatar {
+  background: linear-gradient(135deg, #74b9ff, #0984e3);
+  box-shadow: 0 4px 10px rgba(9, 132, 227, 0.3);
+  border: 2px solid rgba(255, 255, 255, 0.8);
+}
+
+.doctor-name-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 6px;
 }
 
 .doctor-name {
-  font-size: 20px;
-  font-weight: bold;
-  color: #303133;
-  margin-bottom: 8px;
+  font-size: 22px;
+  font-weight: 700;
+  color: #2d3436;
 }
 
-.doctor-meta {
-  display: flex;
-  gap: 10px;
+.doctor-role-badge {
+  background: rgba(108, 92, 231, 0.1);
+  color: #6c5ce7;
+  font-size: 12px;
+  padding: 2px 8px;
+  border-radius: 8px;
+  font-weight: 600;
 }
 
-.stats {
+.doctor-meta-row {
   display: flex;
-  gap: 30px;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #636e72;
+}
+
+.meta-separator { color: #b2bec3; }
+
+.stats-glass {
+  background: rgba(255, 255, 255, 0.3);
+  padding: 10px 25px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  box-shadow: inset 2px 2px 5px rgba(255, 255, 255, 0.5);
 }
 
 .stat-item {
@@ -518,28 +604,283 @@ const handleCancelRegistration = async () => {
 }
 
 .stat-value {
-  font-size: 28px;
-  font-weight: bold;
-  color: #409EFF;
-  line-height: 1;
+  font-size: 24px;
+  font-weight: 800;
+  color: #0984e3;
 }
 
 .stat-label {
   font-size: 12px;
-  color: #909399;
-  margin-top: 5px;
+  color: #636e72;
 }
 
-.full-height { height: 100%; }
-.patient-item {
-  padding: 15px;
-  border-bottom: 1px solid #eee;
-  cursor: pointer;
-  transition: background 0.2s;
+/* ================= 2. 玻璃卡片通用样式 ================= */
+:deep(.glass-card) {
+  background: rgba(255, 255, 255, 0.45);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  border-radius: 24px;
+  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
+  overflow: hidden;
+  height: 100%;
 }
-.patient-item:hover { background-color: #f5f7fa; }
-.patient-item.active { background-color: #e6f7ff; border-right: 3px solid #1890ff; }
-.p-name { font-weight: bold; font-size: 16px; margin-bottom: 5px; }
-.p-info { font-size: 12px; color: #666; }
-.diagnosis-header { display: flex; justify-content: space-between; align-items: center; }
+
+.glass-header {
+  padding: 15px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.5);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.header-title {
+  font-weight: 600;
+  color: #2d3436;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.header-icon {
+  color: #6c5ce7;
+  font-size: 18px;
+}
+
+/* ================= 3. 左侧：拟态患者列表 ================= */
+.patient-list-scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px;
+}
+
+.patient-item-glass {
+  position: relative;
+  margin-bottom: 12px;
+  border-radius: 14px;
+  cursor: pointer;
+  background: rgba(255, 255, 255, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  overflow: hidden;
+}
+
+.p-glass-content {
+  padding: 15px;
+}
+
+.patient-item-glass:hover {
+  transform: translateY(-2px);
+  background: rgba(255, 255, 255, 0.6);
+  box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+}
+
+.patient-item-glass.active {
+  background: rgba(255, 255, 255, 0.9);
+  border-color: #6c5ce7;
+  box-shadow: 0 8px 20px rgba(108, 92, 231, 0.15);
+}
+
+.active-indicator {
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 4px;
+  background: #6c5ce7;
+}
+
+.p-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.p-name {
+  font-weight: 600;
+  color: #2d3436;
+  font-size: 15px;
+}
+
+.p-meta {
+  font-size: 12px;
+  color: #636e72;
+  display: flex;
+  justify-content: space-between;
+  margin-top: 4px;
+}
+
+.p-id {
+  font-family: monospace; /* 稍微等宽一点，显示数字更整齐 */
+}
+
+.gender-tag {
+  background: rgba(255, 255, 255, 0.5);
+  border: none;
+}
+
+/* ================= 4. 右侧：工作区 ================= */
+.glass-header-lg {
+  padding: 20px 30px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.5);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.patient-status .label {
+  font-size: 14px;
+  color: #636e72;
+  margin-right: 10px;
+}
+
+.patient-status .value {
+  font-size: 20px;
+  font-weight: 700;
+  color: #2d3436;
+}
+
+.work-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* 拟态 Tabs 样式重写 */
+:deep(.glass-tabs) {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+:deep(.glass-tabs .el-tabs__header) {
+  margin: 0;
+  padding: 10px 20px 0;
+}
+
+:deep(.glass-tabs .el-tabs__nav-wrap::after) {
+  height: 1px;
+  background-color: rgba(255, 255, 255, 0.5);
+}
+
+:deep(.glass-tabs .el-tabs__item) {
+  font-size: 15px;
+  color: #636e72;
+  transition: all 0.3s;
+}
+
+:deep(.glass-tabs .el-tabs__item.is-active) {
+  font-weight: bold;
+  color: #6c5ce7;
+}
+
+:deep(.glass-tabs .el-tabs__active-bar) {
+  background-color: #6c5ce7;
+  height: 3px;
+  border-radius: 3px;
+}
+
+:deep(.glass-tabs .el-tabs__content) {
+  flex: 1;
+  padding: 20px;
+  overflow-y: auto; /* 内容区滚动 */
+}
+
+/* 拟态表单控件 */
+.glass-textarea :deep(.el-textarea__inner) {
+  background: rgba(240, 245, 255, 0.6);
+  border: none;
+  border-radius: 12px;
+  box-shadow: inset 2px 2px 6px rgba(163, 177, 198, 0.3),
+  inset -2px -2px 6px rgba(255, 255, 255, 0.8);
+  padding: 15px;
+  font-size: 14px;
+  transition: all 0.3s;
+}
+
+.glass-textarea :deep(.el-textarea__inner:focus) {
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 0 0 2px rgba(108, 92, 231, 0.2), inset 1px 1px 3px rgba(0,0,0,0.05);
+}
+
+/* 药品选择与表格 */
+.pres-tools {
+  margin-bottom: 20px;
+}
+
+.glass-select-lg {
+  width: 100%;
+  max-width: 400px;
+}
+
+.glass-select-lg :deep(.el-select__wrapper) {
+  background: rgba(255, 255, 255, 0.6);
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+}
+
+.glass-table-wrapper {
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  box-shadow: 0 4px 15px rgba(0,0,0,0.03);
+}
+
+.glass-table {
+  --el-table-bg-color: rgba(255, 255, 255, 0.3);
+  --el-table-tr-bg-color: transparent;
+  --el-table-header-bg-color: rgba(255, 255, 255, 0.5);
+  background: transparent !important;
+}
+
+:deep(.glass-table th.el-table__cell) {
+  background: rgba(255, 255, 255, 0.5) !important;
+  color: #2d3436;
+  font-weight: 600;
+}
+
+:deep(.glass-table tr) {
+  background: transparent !important;
+}
+
+.price-text {
+  color: #e67e22;
+  font-weight: bold;
+}
+
+/* 按钮样式 */
+.glass-btn-primary {
+  background: linear-gradient(135deg, #6c5ce7, #a29bfe);
+  border: none;
+  border-radius: 10px;
+  padding: 10px 20px;
+  box-shadow: 0 4px 12px rgba(108, 92, 231, 0.3);
+}
+
+.glass-btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(108, 92, 231, 0.4);
+}
+
+.glass-btn-danger {
+  background: transparent;
+  border: 1px solid #ff7675;
+  color: #ff7675;
+  border-radius: 10px;
+}
+
+.glass-btn-danger:hover {
+  background: #ff7675;
+  color: white;
+}
+
+/* 空状态 */
+.empty-state-wrapper {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
 </style>
