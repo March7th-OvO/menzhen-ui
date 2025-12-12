@@ -1,23 +1,24 @@
 <template>
-  <div class="fancy-container">
+  <div class="login-page-container fade-in">
     <!-- 动态背景装饰球 -->
-    <div class="decoration-circle circle-1"></div>
-    <div class="decoration-circle circle-2"></div>
-    <div class="decoration-circle circle-3"></div>
+    <div class="bg-shape shape-1"></div>
+    <div class="bg-shape shape-2"></div>
+    <div class="bg-shape shape-3"></div>
 
-    <div class="auth-box" :class="{ 'register-mode': isRegisterMode, 'forgot-password-mode': isForgotPasswordMode }">
-      <!-- 登录表单区域 -->
-      <div class="form-container login-form-container">
-        <div class="form-content">
-          <div class="brand-area">
-            <div class="logo-bg">
+    <div class="glass-auth-box" :class="{ 'right-panel-active': isRegisterMode, 'forgot-panel-active': isForgotPasswordMode }">
+
+      <!-- 登录表单容器 -->
+      <div class="form-container sign-in-container">
+        <div class="form-content-wrapper">
+          <div class="brand-header">
+            <div class="logo-glass">
               <el-icon class="logo-icon"><FirstAidKit /></el-icon>
             </div>
-            <h2>门诊管理系统</h2>
-            <p class="subtitle">智慧医疗 · 贴心服务</p>
+            <h1>门诊管理系统</h1>
+            <span class="subtitle">智慧医疗 · 贴心服务</span>
           </div>
 
-          <el-form :model="loginForm" class="auth-form" size="large">
+          <el-form :model="loginForm" class="glass-form" size="large">
             <el-form-item>
               <el-input
                   v-model="loginForm.username"
@@ -34,33 +35,37 @@
                   prefix-icon="Lock"
                   show-password
                   class="glass-input"
+                  @keyup.enter="handleLogin"
               />
             </el-form-item>
-            <div class="actions">
+            <div class="form-footer">
               <el-checkbox v-model="rememberMe" label="记住我" class="glass-checkbox" />
-              <el-link type="primary" :underline="false" @click="switchToForgotPassword">忘记密码？</el-link>
+              <el-button link class="forgot-link" @click="switchToForgotPassword">忘记密码？</el-button>
             </div>
-            <el-button type="primary" class="auth-btn pulse-effect" @click="handleLogin" :loading="loginLoading" round>
+
+            <!-- 登录按钮 -->
+            <el-button type="primary" class="glass-btn-primary full-width" @click="handleLogin" :loading="loginLoading">
               立即登录
             </el-button>
 
-            <div class="mobile-switch visible-xs">
+            <!-- 移动端切换入口 -->
+            <div class="mobile-toggle visible-xs">
               还没有账号？<span @click="switchToRegister">去注册</span>
             </div>
           </el-form>
         </div>
       </div>
 
-      <!-- 注册表单区域 -->
-      <div class="form-container register-form-container">
-        <div class="form-content scrollable-content">
-          <div class="brand-area mini">
+      <!-- 注册表单容器 -->
+      <div class="form-container sign-up-container">
+        <div class="form-content-wrapper scroll-wrapper">
+          <div class="brand-header mini">
             <h2>创建新账户</h2>
-            <p class="subtitle">加入我们的医疗团队</p>
+            <span class="subtitle">加入我们的医疗团队</span>
           </div>
 
-          <el-form :model="registerForm" class="auth-form" size="large" label-position="top">
-            <el-row :gutter="20">
+          <el-form :model="registerForm" class="glass-form" size="large" label-position="top">
+            <el-row :gutter="15">
               <el-col :span="12">
                 <el-form-item label="用户名">
                   <el-input v-model="registerForm.username" placeholder="设置用户名" prefix-icon="User" class="glass-input"/>
@@ -73,7 +78,7 @@
               </el-col>
             </el-row>
 
-            <el-row :gutter="20">
+            <el-row :gutter="15">
               <el-col :span="12">
                 <el-form-item label="密码">
                   <el-input v-model="registerForm.password" type="password" placeholder="设置密码" prefix-icon="Lock" show-password class="glass-input"/>
@@ -103,11 +108,11 @@
               </el-radio-group>
             </el-form-item>
 
-            <!-- 医生特有字段 - 带淡入动画 -->
-            <transition name="fade-slide">
+            <!-- 医生特有字段 -->
+            <transition name="el-zoom-in-top">
               <div v-if="registerForm.role === 'doctor'" class="doctor-fields">
                 <el-form-item label="所属科室">
-                  <el-select v-model="registerForm.deptId" placeholder="选择科室" class="glass-select" filterable style="width: 100%">
+                  <el-select v-model="registerForm.deptId" placeholder="选择科室" class="glass-select" popper-class="glass-popper" filterable style="width: 100%">
                     <el-option
                         v-for="dept in deptList"
                         :key="dept.id"
@@ -116,165 +121,123 @@
                     />
                   </el-select>
                 </el-form-item>
-                <el-row :gutter="20">
-                  <el-col :span="12">
-                    <el-form-item label="职称">
-                      <el-input v-model="registerForm.title" placeholder="如：主治医师" prefix-icon="Medal" class="glass-input"/>
-                    </el-form-item>
-                  </el-col>
-                </el-row>
+                <el-form-item label="职称">
+                  <el-input v-model="registerForm.title" placeholder="如：主治医师" prefix-icon="Medal" class="glass-input"/>
+                </el-form-item>
               </div>
             </transition>
 
-            <el-button type="success" class="auth-btn pulse-effect" @click="handleRegister" :loading="registerLoading" round>
+            <el-button type="success" class="glass-btn-success full-width" @click="handleRegister" :loading="registerLoading">
               立即注册
             </el-button>
 
-            <div class="mobile-switch visible-xs">
+            <div class="mobile-toggle visible-xs">
               已有账户？<span @click="switchToLogin">去登录</span>
             </div>
           </el-form>
         </div>
       </div>
 
-      <!-- 忘记密码表单区域 -->
-      <div class="form-container forgot-password-form-container">
-        <div class="form-content">
-          <div class="brand-area mini">
+      <!-- 忘记密码表单容器 -->
+      <div class="form-container forgot-container">
+        <div class="form-content-wrapper">
+          <div class="brand-header mini">
             <h2>找回密码</h2>
-            <p class="subtitle">通过身份验证重置密码</p>
+            <span class="subtitle">通过身份验证重置密码</span>
           </div>
 
           <!-- 第一步：输入用户名 -->
-          <el-form v-if="forgotPasswordStep === 1" :model="forgotPasswordForm" class="auth-form" size="large" label-position="top">
-            <el-form-item label="账号">
-              <el-input 
-                v-model="forgotPasswordForm.username" 
-                placeholder="请输入您的账号" 
-                prefix-icon="User" 
-                class="glass-input"
+          <el-form v-if="forgotPasswordStep === 1" :model="forgotPasswordForm" class="glass-form" size="large">
+            <el-form-item>
+              <el-input
+                  v-model="forgotPasswordForm.username"
+                  placeholder="请输入您的账号"
+                  prefix-icon="User"
+                  class="glass-input"
               />
             </el-form-item>
-            
-            <el-button type="primary" class="auth-btn pulse-effect" @click="checkUsername" :loading="forgotPasswordLoading" round>
+
+            <el-button type="primary" class="glass-btn-primary full-width" @click="checkUsername" :loading="forgotPasswordLoading">
               下一步
             </el-button>
-            
-            <div class="mobile-switch visible-xs">
-              <span @click="switchToLogin">返回登录</span>
-            </div>
+
+            <!-- 修复：添加 style="margin-left: 0" 消除 Element Plus 默认的左边距 -->
+            <el-button class="glass-btn-outline full-width mt-3" @click="switchToLogin" style="margin-left: 0;">
+              返回登录
+            </el-button>
           </el-form>
 
           <!-- 第二步：身份验证 -->
-          <el-form v-else-if="forgotPasswordStep === 2" :model="forgotPasswordForm" class="auth-form" size="large" label-position="top">
+          <el-form v-else-if="forgotPasswordStep === 2" :model="forgotPasswordForm" class="glass-form" size="large" label-position="top">
             <el-form-item label="账号">
-              <el-input 
-                v-model="forgotPasswordForm.username" 
-                disabled
-                prefix-icon="User" 
-                class="glass-input"
-              />
+              <el-input v-model="forgotPasswordForm.username" disabled prefix-icon="User" class="glass-input" />
             </el-form-item>
-            
             <el-form-item label="身份证号">
-              <el-input 
-                v-model="forgotPasswordForm.idCard" 
-                placeholder="请输入身份证号" 
-                prefix-icon="CreditCard" 
-                class="glass-input"
-              />
+              <el-input v-model="forgotPasswordForm.idCard" placeholder="请输入身份证号" prefix-icon="CreditCard" class="glass-input" />
             </el-form-item>
-            
             <el-form-item label="手机号">
-              <el-input 
-                v-model="forgotPasswordForm.phone" 
-                placeholder="请输入手机号" 
-                prefix-icon="Iphone" 
-                class="glass-input"
-              />
+              <el-input v-model="forgotPasswordForm.phone" placeholder="请输入手机号" prefix-icon="Iphone" class="glass-input" />
             </el-form-item>
-            
-            <el-button type="primary" class="auth-btn pulse-effect" @click="verifyIdentity" :loading="forgotPasswordLoading" round>
-              验证身份
-            </el-button>
-            
-            <div class="mobile-switch visible-xs">
-              <span @click="forgotPasswordStep = 1">上一步</span> | <span @click="switchToLogin">返回登录</span>
+
+            <div class="btn-group">
+              <el-button class="glass-btn-outline flex-1" @click="forgotPasswordStep = 1">上一步</el-button>
+              <el-button type="primary" class="glass-btn-primary flex-1" @click="verifyIdentity" :loading="forgotPasswordLoading">
+                验证身份
+              </el-button>
             </div>
+
+            <!-- 这里的返回登录因为上面是 div 隔开了，所以不需要 margin-left: 0，但为了保险也加上 -->
+            <el-button class="glass-btn-outline full-width mt-3" @click="switchToLogin">返回登录</el-button>
           </el-form>
 
           <!-- 第三步：重置密码 -->
-          <el-form v-else-if="forgotPasswordStep === 3" :model="forgotPasswordForm" class="auth-form" size="large" label-position="top">
+          <el-form v-else-if="forgotPasswordStep === 3" :model="forgotPasswordForm" class="glass-form" size="large" label-position="top">
             <el-form-item label="账号">
-              <el-input 
-                v-model="forgotPasswordForm.username" 
-                disabled
-                prefix-icon="User" 
-                class="glass-input"
-              />
+              <el-input v-model="forgotPasswordForm.username" disabled prefix-icon="User" class="glass-input" />
             </el-form-item>
-            
             <el-form-item label="新密码">
-              <el-input 
-                v-model="forgotPasswordForm.newPassword" 
-                type="password"
-                placeholder="请输入新密码" 
-                prefix-icon="Lock" 
-                show-password
-                class="glass-input"
-              />
+              <el-input v-model="forgotPasswordForm.newPassword" type="password" placeholder="请输入新密码" prefix-icon="Lock" show-password class="glass-input" />
             </el-form-item>
-            
             <el-form-item label="确认新密码">
-              <el-input 
-                v-model="forgotPasswordForm.confirmPassword" 
-                type="password"
-                placeholder="请再次输入新密码" 
-                prefix-icon="Lock" 
-                show-password
-                class="glass-input"
-              />
+              <el-input v-model="forgotPasswordForm.confirmPassword" type="password" placeholder="请再次输入新密码" prefix-icon="Lock" show-password class="glass-input" />
             </el-form-item>
-            
-            <el-button type="success" class="auth-btn pulse-effect" @click="handleResetPassword" :loading="forgotPasswordLoading" round>
+
+            <el-button type="success" class="glass-btn-success full-width" @click="handleResetPassword" :loading="forgotPasswordLoading">
               重置密码
             </el-button>
-            
-            <div class="mobile-switch visible-xs">
-              <span @click="switchToLogin">返回登录</span>
-            </div>
+
+            <!-- 修复：同样添加 margin-left: 0 -->
+            <el-button class="glass-btn-outline full-width mt-3" @click="switchToLogin" style="margin-left: 0;">
+              返回登录
+            </el-button>
           </el-form>
         </div>
       </div>
 
-      <!-- 滑动覆盖层 (遮罩) -->
+      <!-- 滑动覆盖层 (Overlay) -->
       <div class="overlay-container">
         <div class="overlay">
-          <!-- 动态波浪背景 -->
-          <div class="overlay-bg-shape"></div>
+          <!-- 覆盖层背景装饰 -->
+          <div class="overlay-bg-decoration"></div>
 
           <div class="overlay-panel overlay-left">
-            <div class="panel-content">
-              <h2>欢迎回来！</h2>
-              <p>请登录您的个人账户以继续管理门诊业务。</p>
-              <button class="ghost-btn" @click="switchToLogin">
-                返 回 登 录
-                <el-icon class="icon-arrow"><Back /></el-icon>
-              </button>
-            </div>
+            <h2>欢迎回来！</h2>
+            <p>请登录您的个人账户以继续管理门诊业务。</p>
+            <button class="ghost-btn" @click="switchToLogin">
+              <el-icon><Back /></el-icon> 返回登录
+            </button>
           </div>
+
           <div class="overlay-panel overlay-right">
-            <div class="panel-content">
-              <h2>你好，朋友！</h2>
-              <p>输入您的个人详细信息，开始您的智慧医疗之旅。</p>
-              <button class="ghost-btn" @click="switchToRegister">
-                去 注 册
-                <el-icon class="icon-arrow"><Right /></el-icon>
-              </button>
-            </div>
+            <h2>你好，朋友！</h2>
+            <p>输入您的个人详细信息，开始您的智慧医疗之旅。</p>
+            <button class="ghost-btn" @click="switchToRegister">
+              去注册 <el-icon><Right /></el-icon>
+            </button>
           </div>
         </div>
       </div>
+
     </div>
   </div>
 </template>
@@ -321,12 +284,12 @@ const forgotPasswordLoading = ref(false)
 const forgotPasswordStep = ref(1) // 1: 输入用户名, 2: 身份验证, 3: 重置密码
 
 // 切换逻辑
-const switchToRegister = () => { 
-  isRegisterMode.value = true 
+const switchToRegister = () => {
+  isRegisterMode.value = true
   isForgotPasswordMode.value = false
 }
-const switchToLogin = () => { 
-  isRegisterMode.value = false 
+const switchToLogin = () => {
+  isRegisterMode.value = false
   isForgotPasswordMode.value = false
   forgotPasswordStep.value = 1
   // 清空忘记密码表单
@@ -382,7 +345,7 @@ const checkUsername = async () => {
   if (!forgotPasswordForm.value.username) {
     return ElMessage.warning('请输入账号')
   }
-  
+
   forgotPasswordLoading.value = true
   try {
     // 这里应该调用 API 检查用户名是否存在
@@ -403,7 +366,7 @@ const verifyIdentity = async () => {
   if (!forgotPasswordForm.value.idCard || !forgotPasswordForm.value.phone) {
     return ElMessage.warning('请输入完整的身份信息')
   }
-  
+
   forgotPasswordLoading.value = true
   try {
     // 调用 API 验证身份信息
@@ -412,9 +375,9 @@ const verifyIdentity = async () => {
       id_number: forgotPasswordForm.value.idCard,  // 修复：将idCard改为id_number以匹配后端API
       phone: forgotPasswordForm.value.phone
     }
-    
+
     await verifyUserInfo(data)
-    
+
     forgotPasswordStep.value = 3
     ElMessage.success('身份验证通过，请设置新密码')
   } catch (e) {
@@ -429,15 +392,15 @@ const handleResetPassword = async () => {
   if (!forgotPasswordForm.value.newPassword || !forgotPasswordForm.value.confirmPassword) {
     return ElMessage.warning('请输入完整密码信息')
   }
-  
+
   if (forgotPasswordForm.value.newPassword !== forgotPasswordForm.value.confirmPassword) {
     return ElMessage.warning('两次输入的密码不一致')
   }
-  
+
   if (forgotPasswordForm.value.newPassword.length < 6) {
     return ElMessage.warning('密码长度不能少于6位')
   }
-  
+
   forgotPasswordLoading.value = true
   try {
     // 调用 API 重置密码
@@ -447,9 +410,9 @@ const handleResetPassword = async () => {
       phone: forgotPasswordForm.value.phone,
       newPassword: forgotPasswordForm.value.newPassword
     }
-    
+
     await resetPassword(data)
-    
+
     ElMessage.success('密码重置成功，请重新登录')
     switchToLogin()
   } catch (e) {
@@ -522,322 +485,136 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-/* ---------------------------
-  核心配色与变量
-  ---------------------------
-*/
-:root {
-  --primary-color: #00c6ff;
-  --secondary-color: #0072ff;
-  --text-dark: #2d3436;
-  --text-light: #636e72;
-  --glass-bg: rgba(255, 255, 255, 0.75);
-  --glass-border: 1px solid rgba(255, 255, 255, 0.8);
-  --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
-}
-
-.fancy-container {
-  min-height: 100vh;
-  width: 100%;
+/* ================= 全局布局与背景 ================= */
+.login-page-container {
+  height: 100vh;
+  width: 100vw;
+  background: linear-gradient(135deg, #e0eafc 0%, #cfdef3 100%);
   display: flex;
   justify-content: center;
   align-items: center;
-  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
   position: relative;
   overflow: hidden;
-  font-family: 'PingFang SC', 'Helvetica Neue', Helvetica, 'Hiragino Sans GB', 'Microsoft YaHei', Arial, sans-serif;
+  font-family: 'PingFang SC', sans-serif;
 }
 
-/* ---------------------------
-  动态背景装饰 (Blobs)
-  ---------------------------
-*/
-.decoration-circle {
+/* 动态背景球 */
+.bg-shape {
   position: absolute;
   border-radius: 50%;
   filter: blur(80px);
   z-index: 0;
-  opacity: 0.8;
-  animation: float 20s infinite ease-in-out;
+  opacity: 0.6;
+  animation: float 20s infinite ease-in-out alternate;
 }
-
-.circle-1 {
+.shape-1 {
   width: 500px;
   height: 500px;
-  background: linear-gradient(to right, #4facfe, #00f2fe);
-  top: -100px;
+  background: #a18cd1;
+  top: -150px;
   left: -100px;
-  animation-delay: 0s;
 }
-
-.circle-2 {
+.shape-2 {
   width: 400px;
   height: 400px;
-  background: linear-gradient(to right, #43e97b, #38f9d7);
-  bottom: -50px;
+  background: #fbc2eb;
+  bottom: -100px;
   right: -50px;
   animation-delay: -5s;
 }
-
-.circle-3 {
+.shape-3 {
   width: 300px;
   height: 300px;
-  background: linear-gradient(to right, #fa709a, #fee140);
+  background: #8fd3f4;
   top: 40%;
   left: 40%;
   animation-delay: -10s;
 }
 
 @keyframes float {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  33% { transform: translate(30px, -50px) scale(1.1); }
-  66% { transform: translate(-20px, 20px) scale(0.9); }
+  0% { transform: translate(0, 0) rotate(0deg); }
+  100% { transform: translate(30px, 30px) rotate(10deg); }
 }
 
-/* ---------------------------
-  主卡片 (Auth Box)
-  ---------------------------
-*/
-.auth-box {
-  position: relative;
-  width: 1000px;
-  max-width: 90%;
-  min-height: 650px;
-  background: var(--glass-bg);
+/* ================= 玻璃认证框主体 (Glass Box) ================= */
+.glass-auth-box {
+  background: rgba(255, 255, 255, 0.45);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border: var(--glass-border);
+  border: 1px solid rgba(255, 255, 255, 0.6);
   border-radius: 24px;
-  box-shadow: var(--glass-shadow);
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+  position: relative;
   overflow: hidden;
+  width: 1000px;
+  max-width: 90%;
+  min-height: 600px;
   z-index: 1;
-  transition: all 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55); /* 更有弹性的动画 */
 }
 
-/* ---------------------------
-  表单通用样式
-  ---------------------------
-*/
+/* ================= 表单容器布局 ================= */
 .form-container {
   position: absolute;
   top: 0;
   height: 100%;
   transition: all 0.6s ease-in-out;
-  width: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-.login-form-container {
+/* 登录容器 */
+.sign-in-container {
   left: 0;
+  width: 50%;
   z-index: 2;
 }
 
-.register-form-container {
+/* 注册容器 */
+.sign-up-container {
   left: 0;
+  width: 50%;
   opacity: 0;
   z-index: 1;
-  pointer-events: none;
 }
 
-.forgot-password-form-container {
+/* 忘记密码容器 */
+.forgot-container {
   left: 0;
+  width: 50%;
   opacity: 0;
   z-index: 1;
-  pointer-events: none;
+  transform: translateX(0); /* 默认不移动，通过 opacity 显隐 */
 }
 
-/* 核心修复：注册模式下登录表单必须透明 */
-.auth-box.register-mode .login-form-container {
+/* === 状态切换逻辑 (保持原有逻辑，适配新样式) === */
+
+/* 1. 注册模式激活 */
+.glass-auth-box.right-panel-active .sign-in-container {
   transform: translateX(100%);
-  opacity: 0; /* 关键点 */
-  pointer-events: none;
+  opacity: 0; /* 关键：隐藏登录表单 */
 }
 
-.auth-box.register-mode .register-form-container {
+.glass-auth-box.right-panel-active .sign-up-container {
   transform: translateX(100%);
   opacity: 1;
   z-index: 5;
-  pointer-events: all;
+  animation: show 0.6s;
 }
 
-/* ---------------------------
-   修复后的忘记密码模式样式
-   ---------------------------
-*/
-
-/* 1. 让登录框原地消失，不要滑走 */
-.auth-box.forgot-password-mode .login-form-container {
-  transform: translateX(0); /* 修改：原来是 100%，改为 0 */
+/* 2. 忘记密码模式激活 */
+.glass-auth-box.forgot-panel-active .sign-in-container {
   opacity: 0;
-  pointer-events: none;
+  z-index: 0;
 }
 
-/* 2. 让找回密码框在左侧原地显示 */
-.auth-box.forgot-password-mode .forgot-password-form-container {
-  transform: translateX(0); /* 修改：原来是 100%，改为 0 */
+.glass-auth-box.forgot-panel-active .forgot-container {
   opacity: 1;
   z-index: 5;
-  pointer-events: all;
+  animation: fadeIn 0.5s;
 }
 
-.form-content {
-  width: 100%;
-  max-width: 420px;
-  padding: 0 40px;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  position: relative;
-}
-
-/* 注册页内容较多，需要滚动 */
-.scrollable-content {
-  overflow-y: auto;
-  justify-content: flex-start;
-  padding-top: 40px;
-  padding-bottom: 20px;
-}
-/* 隐藏滚动条但保留功能 */
-.scrollable-content::-webkit-scrollbar { width: 4px; }
-.scrollable-content::-webkit-scrollbar-thumb { background: #ccc; border-radius: 4px; }
-
-/* ---------------------------
-  品牌与排版
-  ---------------------------
-*/
-.brand-area {
-  text-align: center;
-  margin-bottom: 30px;
-}
-
-.brand-area.mini {
-  margin-bottom: 20px;
-  text-align: left;
-}
-
-.logo-bg {
-  width: 70px;
-  height: 70px;
-  background: linear-gradient(135deg, #0061ff, #60efff);
-  border-radius: 20px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin: 0 auto 15px;
-  box-shadow: 0 10px 20px rgba(0, 97, 255, 0.3);
-  transform: rotate(-10deg);
-  transition: transform 0.3s ease;
-}
-
-.logo-bg:hover {
-  transform: rotate(0deg) scale(1.1);
-}
-
-.logo-icon {
-  font-size: 36px;
-  color: white;
-}
-
-h2 {
-  color: var(--text-dark);
-  font-size: 28px;
-  font-weight: 700;
-  margin-bottom: 8px;
-  letter-spacing: 1px;
-}
-
-.subtitle {
-  color: var(--text-light);
-  font-size: 14px;
-}
-
-/* ---------------------------
-  Element Plus 深度定制 (Glass Style)
-  ---------------------------
-*/
-.auth-form {
-  margin-top: 10px;
-}
-
-/* 输入框 */
-:deep(.el-input__wrapper) {
-  background-color: rgba(255, 255, 255, 0.5) !important;
-  box-shadow: none !important;
-  border: 1px solid rgba(0, 0, 0, 0.05);
-  border-radius: 12px;
-  padding: 8px 15px;
-  transition: all 0.3s ease;
-}
-
-:deep(.el-input__wrapper:hover),
-:deep(.el-input__wrapper.is-focus) {
-  background-color: rgba(255, 255, 255, 0.9) !important;
-  border-color: var(--primary-color) !important;
-  box-shadow: 0 0 0 3px rgba(0, 198, 255, 0.1) !important;
-  transform: translateY(-2px);
-}
-
-/* 选择框 */
-:deep(.el-select__wrapper) {
-  border-radius: 12px;
-  background-color: rgba(255, 255, 255, 0.5) !important;
-  box-shadow: none !important;
-  border: 1px solid rgba(0, 0, 0, 0.05);
-}
-
-/* 按钮 */
-.auth-btn {
-  width: 100%;
-  padding: 22px 0;
-  font-size: 16px;
-  font-weight: 600;
-  letter-spacing: 2px;
-  border: none;
-  background: linear-gradient(to right, #00c6ff, #0072ff);
-  box-shadow: 0 10px 20px rgba(0, 114, 255, 0.3);
-  margin-top: 20px;
-  margin-bottom: 30px;
-  transition: all 0.3s ease;
-}
-
-.auth-btn:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 15px 25px rgba(0, 114, 255, 0.4);
-  background: linear-gradient(to right, #0072ff, #00c6ff);
-}
-
-/* 角色单选组 */
-:deep(.el-radio-button__inner) {
-  background: transparent;
-  border: 1px solid rgba(0,0,0,0.1);
-  border-radius: 8px !important;
-  margin-right: 5px;
-  box-shadow: none !important;
-  color: #666;
-}
-
-:deep(.el-radio-button__original-radio:checked + .el-radio-button__inner) {
-  background: var(--secondary-color);
-  border-color: var(--secondary-color);
-  color: white;
-  box-shadow: 0 5px 15px rgba(0, 114, 255, 0.3) !important;
-}
-
-/* 其他小控件 */
-.actions {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-}
-
-/* ---------------------------
-  覆盖层动画 (Overlay)
-  ---------------------------
-*/
+/* ================= 覆盖层 (Overlay) - 滑动玻璃板 ================= */
 .overlay-container {
   position: absolute;
   top: 0;
@@ -847,21 +624,20 @@ h2 {
   overflow: hidden;
   transition: transform 0.6s ease-in-out;
   z-index: 100;
-  border-top-right-radius: 24px;
-  border-bottom-right-radius: 24px;
+  border-radius: 0 24px 24px 0; /* 默认右侧圆角 */
 }
 
-.auth-box.register-mode .overlay-container {
+.glass-auth-box.right-panel-active .overlay-container {
   transform: translateX(-100%);
-  border-radius: 24px 0 0 24px; /* 动态改变圆角 */
+  border-radius: 24px 0 0 24px; /* 切换到左侧时圆角变左边 */
 }
 
 .overlay {
-  background: linear-gradient(to right, #00c6ff, #0072ff);
+  background: linear-gradient(135deg, #6c5ce7, #a29bfe); /* 新主题色 */
   background-repeat: no-repeat;
   background-size: cover;
   background-position: 0 0;
-  color: #fff;
+  color: #FFFFFF;
   position: relative;
   left: -100%;
   height: 100%;
@@ -870,20 +646,17 @@ h2 {
   transition: transform 0.6s ease-in-out;
 }
 
-/* 覆盖层里的波浪纹路 */
-.overlay-bg-shape {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 320'%3E%3Cpath fill='rgba(255,255,255,0.1)' fill-opacity='1' d='M0,64L48,80C96,96,192,128,288,128C384,128,480,96,576,90.7C672,85,768,107,864,133.3C960,160,1056,192,1152,186.7C1248,181,1344,139,1392,117.3L1440,96L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z'%3E%3C/path%3E%3C/svg%3E");
-  background-size: cover;
-  opacity: 0.3;
+.glass-auth-box.right-panel-active .overlay {
+  transform: translateX(50%);
 }
 
-.auth-box.register-mode .overlay {
-  transform: translateX(50%);
+.overlay-bg-decoration {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  /* 简单的波浪纹路装饰 */
+  background-image: radial-gradient(circle at 20% 20%, rgba(255,255,255,0.2) 0%, transparent 20%),
+  radial-gradient(circle at 80% 80%, rgba(255,255,255,0.2) 0%, transparent 20%);
 }
 
 .overlay-panel {
@@ -901,16 +674,11 @@ h2 {
   transition: transform 0.6s ease-in-out;
 }
 
-.panel-content {
-  position: relative;
-  z-index: 2;
-}
-
 .overlay-left {
   transform: translateX(-20%);
 }
 
-.auth-box.register-mode .overlay-left {
+.glass-auth-box.right-panel-active .overlay-left {
   transform: translateX(0);
 }
 
@@ -919,145 +687,282 @@ h2 {
   transform: translateX(0);
 }
 
-.auth-box.register-mode .overlay-right {
+.glass-auth-box.right-panel-active .overlay-right {
   transform: translateX(20%);
 }
 
+/* 覆盖层文字样式 */
 .overlay-panel h2 {
-  color: #fff;
-  font-size: 32px;
+  font-size: 30px;
+  font-weight: 700;
+  margin-bottom: 15px;
+}
+.overlay-panel p {
+  font-size: 15px;
+  line-height: 1.6;
+  margin-bottom: 30px;
+  opacity: 0.9;
+}
+
+/* ================= 内部内容排版 ================= */
+.form-content-wrapper {
+  width: 100%;
+  padding: 0 50px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  height: 100%;
+}
+
+.scroll-wrapper {
+  overflow-y: auto;
+  justify-content: flex-start;
+  padding-top: 40px;
+  padding-bottom: 20px;
+}
+/* 隐藏滚动条 */
+.scroll-wrapper::-webkit-scrollbar { width: 4px; }
+.scroll-wrapper::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.1); border-radius: 4px; }
+
+/* 品牌头部 */
+.brand-header {
+  text-align: center;
+  margin-bottom: 30px;
+}
+.brand-header.mini {
+  text-align: left;
   margin-bottom: 20px;
 }
 
-.overlay-panel p {
-  font-size: 16px;
-  line-height: 1.6;
-  margin-bottom: 30px;
-  color: rgba(255, 255, 255, 0.9);
+.logo-glass {
+  width: 64px;
+  height: 64px;
+  background: linear-gradient(135deg, #ffffff, #dfe6e9);
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 15px;
+  box-shadow: 5px 5px 15px rgba(0,0,0,0.05), -5px -5px 15px rgba(255,255,255,0.8);
+}
+.logo-icon {
+  font-size: 32px;
+  color: #6c5ce7;
 }
 
-/* 幽灵按钮 (覆盖层上的按钮) */
+.brand-header h1, .brand-header h2 {
+  font-size: 24px;
+  color: #2d3436;
+  font-weight: 700;
+  margin: 0 0 5px;
+}
+.subtitle {
+  color: #636e72;
+  font-size: 14px;
+}
+
+/* ================= 拟态表单控件 (Glass/Neumorphism Inputs) ================= */
+.glass-form {
+  width: 100%;
+}
+
+/* 输入框 */
+:deep(.glass-input .el-input__wrapper) {
+  background: rgba(240, 245, 255, 0.6);
+  box-shadow: inset 2px 2px 6px rgba(163, 177, 198, 0.3),
+  inset -2px -2px 6px rgba(255, 255, 255, 0.8);
+  border-radius: 12px;
+  border: none;
+  padding: 10px 15px;
+  transition: all 0.3s;
+}
+
+:deep(.glass-input .el-input__wrapper.is-focus) {
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 0 0 2px rgba(108, 92, 231, 0.3),
+  inset 2px 2px 6px rgba(163, 177, 198, 0.1);
+}
+
+/* 下拉框 */
+:deep(.glass-select .el-select__wrapper) {
+  background: rgba(240, 245, 255, 0.6);
+  box-shadow: inset 2px 2px 6px rgba(163, 177, 198, 0.3),
+  inset -2px -2px 6px rgba(255, 255, 255, 0.8);
+  border-radius: 12px;
+  border: none;
+}
+
+/* 单选组 */
+:deep(.glass-radio-group .el-radio-button__inner) {
+  background: transparent;
+  border: 1px solid rgba(0,0,0,0.1);
+  border-radius: 8px !important;
+  margin-right: 5px;
+  box-shadow: none !important;
+  color: #636e72;
+}
+
+:deep(.glass-radio-group .el-radio-button__original-radio:checked + .el-radio-button__inner) {
+  background: #6c5ce7;
+  border-color: #6c5ce7;
+  color: white;
+  box-shadow: 0 4px 10px rgba(108, 92, 231, 0.3) !important;
+}
+
+/* 按钮 */
+.glass-btn-primary {
+  background: linear-gradient(135deg, #6c5ce7, #a29bfe);
+  border: none;
+  border-radius: 12px;
+  height: 44px;
+  font-size: 16px;
+  font-weight: 600;
+  box-shadow: 0 6px 15px rgba(108, 92, 231, 0.3);
+  transition: transform 0.2s;
+  letter-spacing: 1px;
+}
+.glass-btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(108, 92, 231, 0.4);
+  background: linear-gradient(135deg, #7b6bed, #b0aafc);
+}
+
+.glass-btn-success {
+  background: linear-gradient(135deg, #00b894, #55efc4);
+  border: none;
+  border-radius: 12px;
+  height: 44px;
+  font-size: 16px;
+  font-weight: 600;
+  box-shadow: 0 6px 15px rgba(0, 184, 148, 0.3);
+  color: white;
+}
+.glass-btn-success:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(0, 184, 148, 0.4);
+}
+
+.glass-btn-outline {
+  background: transparent;
+  border: 1px solid #6c5ce7;
+  color: #6c5ce7;
+  border-radius: 12px;
+  font-weight: 600;
+  height: 44px; /* 强制对齐高度 */
+}
+.glass-btn-outline:hover {
+  background: rgba(108, 92, 231, 0.1);
+}
+
+.full-width {
+  width: 100%;
+}
+.mt-3 { margin-top: 15px; }
+.flex-1 { flex: 1; }
+.btn-group { display: flex; gap: 15px; }
+
+/* 辅助文字链接 */
+.form-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 25px;
+}
+.forgot-link {
+  color: #6c5ce7;
+  font-weight: 500;
+}
+.forgot-link:hover { text-decoration: underline; }
+
+/* 覆盖层上的幽灵按钮 */
 .ghost-btn {
   background-color: transparent;
-  border: 2px solid #fff;
-  color: #fff;
-  padding: 12px 35px;
-  font-size: 16px;
-  border-radius: 50px;
+  border: 2px solid #FFFFFF;
+  color: #FFFFFF;
+  padding: 10px 30px;
+  font-size: 14px;
+  font-weight: 600;
+  border-radius: 25px;
   cursor: pointer;
   transition: all 0.3s;
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  gap: 10px;
-  overflow: hidden;
-  position: relative;
+  gap: 8px;
 }
-
 .ghost-btn:hover {
-  background-color: #fff;
-  color: var(--secondary-color);
-  transform: scale(1.05);
+  background-color: #FFFFFF;
+  color: #6c5ce7;
 }
 
-.icon-arrow {
-  transition: transform 0.3s;
+/* 动画关键帧 */
+@keyframes show {
+  0%, 49.99% { opacity: 0; z-index: 1; }
+  50%, 100% { opacity: 1; z-index: 5; }
 }
 
-.ghost-btn:hover .icon-arrow {
-  transform: translateX(5px);
+@keyframes fadeIn {
+  0% { opacity: 0; transform: translateY(-20px); }
+  100% { opacity: 1; transform: translateY(0); }
 }
 
-/* ---------------------------
-  过渡与动画
-  ---------------------------
-*/
-.fade-slide-enter-active,
-.fade-slide-leave-active {
-  transition: all 0.5s ease;
-  max-height: 200px;
-  opacity: 1;
-}
+/* ================= 移动端适配 ================= */
+.visible-xs { display: none; }
 
-.fade-slide-enter-from,
-.fade-slide-leave-to {
-  max-height: 0;
-  opacity: 0;
-  transform: translateY(-10px);
-}
-
-.visible-xs {
-  display: none;
-}
-
-/* ---------------------------
-  响应式适配 (Mobile)
-  ---------------------------
-*/
 @media (max-width: 768px) {
-  .auth-box {
+  .glass-auth-box {
     width: 100%;
     height: 100vh;
     border-radius: 0;
     max-width: 100%;
     border: none;
+    overflow-y: auto; /* 允许纵向滚动 */
   }
 
   .overlay-container {
-    display: none; /* 移动端隐藏滑动层 */
+    display: none; /* 移动端隐藏滑动遮罩 */
   }
 
   .form-container {
     width: 100%;
+    position: relative; /* 相对定位，不重叠 */
+    padding: 20px;
     height: auto;
     min-height: 100vh;
-    padding: 40px 20px;
-    background: rgba(255, 255, 255, 0.85); /* 移动端背景加深 */
   }
 
-  /* 移动端直接控制显隐，不需要滑动动画 */
-  .auth-box.register-mode .login-form-container {
-    display: none;
-  }
-
-  .register-form-container {
+  /* 移动端直接控制显隐，不用 transform */
+  .sign-in-container, .sign-up-container, .forgot-container {
     display: none;
     opacity: 1;
-    pointer-events: all;
-    transform: none;
+    transform: none !important;
+    left: 0 !important;
   }
 
-  .auth-box.register-mode .register-form-container {
+  /* 默认显示登录 */
+  .glass-auth-box:not(.right-panel-active):not(.forgot-panel-active) .sign-in-container {
     display: flex;
-    transform: none;
   }
 
-  .forgot-password-form-container {
-    display: none;
-    opacity: 1;
-    pointer-events: all;
-    transform: none;
-  }
-
-  .auth-box.forgot-password-mode .forgot-password-form-container {
+  /* 注册激活 */
+  .glass-auth-box.right-panel-active .sign-up-container {
     display: flex;
-    transform: none;
   }
-  
+
+  /* 忘密激活 */
+  .glass-auth-box.forgot-panel-active .forgot-container {
+    display: flex;
+  }
+
   .visible-xs {
     display: block;
-    margin-top: 20px;
     text-align: center;
-    color: #666;
+    margin-top: 20px;
+    color: #636e72;
   }
-
   .visible-xs span {
-    color: var(--secondary-color);
+    color: #6c5ce7;
     font-weight: bold;
     cursor: pointer;
-  }
-
-  .decoration-circle {
-    opacity: 0.5; /* 移动端减弱背景干扰 */
   }
 }
 </style>
