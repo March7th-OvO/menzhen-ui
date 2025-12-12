@@ -47,7 +47,10 @@
           <template #header>
             <div class="diagnosis-header">
               <span>正在接诊：<b>{{ currentReg.patientName }}</b></span>
-              <el-button type="success" @click="handleSubmitDiagnosis">提交诊疗结果</el-button>
+              <div>
+                <el-button type="warning" @click="handleCancelRegistration" style="margin-right: 10px;">退号</el-button>
+                <el-button type="success" @click="handleSubmitDiagnosis">提交诊疗结果</el-button>
+              </div>
             </div>
           </template>
 
@@ -114,6 +117,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { getPendingPatients, searchMedicines, submitDiagnosis, getDoctorInfoByUserId, getDeptById } from '../api'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import request from '../utils/request'
 
 // 获取当前登录用户信息
 const currentUser = JSON.parse(localStorage.getItem('user') || '{}')
@@ -240,13 +244,29 @@ const loadDoctorInfo = async () => {
   }
 }
 
-// 搜索药品函数
 const searchMedicinesFunc = async (keyword) => {
   try {
-    medicineOptions.value = await searchMedicines(keyword)
+    // 构造查询参数
+    let url = '/medicine/search';
+    const params = [];
+
+    if (keyword) {
+      params.push(`keyword=${encodeURIComponent(keyword)}`);
+    }
+
+    // 添加状态过滤参数，只显示在售药品
+    params.push('status=1');
+
+    if (params.length > 0) {
+      url += '?' + params.join('&');
+    }
+
+    // 发起请求
+    const response = await request.get(url);
+    medicineOptions.value = response.filter(med => med.status === 1);
   } catch (error) {
-    console.error('搜索药品失败:', error)
-    medicineOptions.value = []
+    console.error('搜索药品失败:', error);
+    medicineOptions.value = [];
   }
 }
 
@@ -377,6 +397,55 @@ const handleSubmitDiagnosis = async () => {
       ElMessageBox.alert(
           error.message || '未知错误',
           '提交失败',
+          {
+            confirmButtonText: '确定',
+            type: 'error',
+          }
+      )
+    }
+  }
+}
+
+// 添加退号处理方法
+const handleCancelRegistration = async () => {
+  if (!(currentReg.value.reg_id)) {
+    ElMessage.warning('请选择患者')
+    return
+  }
+
+  try {
+    // 确认是否要退号
+    await ElMessageBox.confirm(
+        `确定要为患者 ${currentReg.value.patientName} 办理退号吗？此操作将把挂号状态修改为已退号。`,
+        '确认退号',
+        {
+          confirmButtonText: '确定',
+          cancelButtonText: '取消',
+          type: 'warning',
+        }
+    )
+
+    // 执行退号操作（修改挂号状态为3-已退号）
+    const regId = currentReg.value.reg_id
+    await request.post(`/registration/cancel/${regId}`)
+
+    ElMessage.success('退号成功，挂号状态已更新')
+
+    // 刷新患者列表
+    await refreshPatients()
+
+    // 清空当前选中患者和表单
+    currentReg.value = {}
+    diagnosisForm.description = ''
+    diagnosisForm.diagnosis = ''
+    diagnosisForm.advice = ''
+    diagnosisForm.medicines = []
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('退号失败:', error)
+      ElMessageBox.alert(
+          error.message || '退号失败，请稍后重试',
+          '退号失败',
           {
             confirmButtonText: '确定',
             type: 'error',

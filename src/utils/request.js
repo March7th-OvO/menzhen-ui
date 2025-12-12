@@ -10,8 +10,10 @@ const service = axios.create({
 // 请求拦截器:自动带上 Token
 service.interceptors.request.use(config => {
     // 公开访问的接口列表，不需要添加 token
-    const publicUrls = ['/user/register', '/user/login', '/dept/list']
-    const isPublicUrl = publicUrls.some(url => config.url.includes(url))
+    const publicUrls = ['/user/register', '/user/login', '/dept/list', '/user/verify-user-info', '/user/reset-password']
+    const url = config.url.replace(config.baseURL || '', '') // 移除baseURL获取相对路径
+    
+    const isPublicUrl = publicUrls.some(publicUrl => url === publicUrl)
 
     if (!isPublicUrl) {
         const token = localStorage.getItem('token')

@@ -5,7 +5,7 @@
     <div class="decoration-circle circle-2"></div>
     <div class="decoration-circle circle-3"></div>
 
-    <div class="auth-box" :class="{ 'register-mode': isRegisterMode }">
+    <div class="auth-box" :class="{ 'register-mode': isRegisterMode, 'forgot-password-mode': isForgotPasswordMode }">
       <!-- 登录表单区域 -->
       <div class="form-container login-form-container">
         <div class="form-content">
@@ -38,7 +38,7 @@
             </el-form-item>
             <div class="actions">
               <el-checkbox v-model="rememberMe" label="记住我" class="glass-checkbox" />
-              <el-link type="primary" :underline="false">忘记密码？</el-link>
+              <el-link type="primary" :underline="false" @click="switchToForgotPassword">忘记密码？</el-link>
             </div>
             <el-button type="primary" class="auth-btn pulse-effect" @click="handleLogin" :loading="loginLoading" round>
               立即登录
@@ -86,6 +86,14 @@
               </el-col>
             </el-row>
 
+            <el-form-item label="联系电话">
+              <el-input v-model="registerForm.phone" placeholder="手机号码" prefix-icon="Iphone" class="glass-input"/>
+            </el-form-item>
+
+            <el-form-item label="身份证号">
+              <el-input v-model="registerForm.idCard" placeholder="身份证号码" prefix-icon="CreditCard" class="glass-input"/>
+            </el-form-item>
+
             <el-form-item label="角色选择">
               <el-radio-group v-model="registerForm.role" @change="handleRoleChange" class="glass-radio-group">
                 <el-radio-button label="doctor">医生</el-radio-button>
@@ -114,11 +122,6 @@
                       <el-input v-model="registerForm.title" placeholder="如：主治医师" prefix-icon="Medal" class="glass-input"/>
                     </el-form-item>
                   </el-col>
-                  <el-col :span="12">
-                    <el-form-item label="联系电话">
-                      <el-input v-model="registerForm.phone" placeholder="手机号码" prefix-icon="Iphone" class="glass-input"/>
-                    </el-form-item>
-                  </el-col>
                 </el-row>
               </div>
             </transition>
@@ -129,6 +132,116 @@
 
             <div class="mobile-switch visible-xs">
               已有账户？<span @click="switchToLogin">去登录</span>
+            </div>
+          </el-form>
+        </div>
+      </div>
+
+      <!-- 忘记密码表单区域 -->
+      <div class="form-container forgot-password-form-container">
+        <div class="form-content">
+          <div class="brand-area mini">
+            <h2>找回密码</h2>
+            <p class="subtitle">通过身份验证重置密码</p>
+          </div>
+
+          <!-- 第一步：输入用户名 -->
+          <el-form v-if="forgotPasswordStep === 1" :model="forgotPasswordForm" class="auth-form" size="large" label-position="top">
+            <el-form-item label="账号">
+              <el-input 
+                v-model="forgotPasswordForm.username" 
+                placeholder="请输入您的账号" 
+                prefix-icon="User" 
+                class="glass-input"
+              />
+            </el-form-item>
+            
+            <el-button type="primary" class="auth-btn pulse-effect" @click="checkUsername" :loading="forgotPasswordLoading" round>
+              下一步
+            </el-button>
+            
+            <div class="mobile-switch visible-xs">
+              <span @click="switchToLogin">返回登录</span>
+            </div>
+          </el-form>
+
+          <!-- 第二步：身份验证 -->
+          <el-form v-else-if="forgotPasswordStep === 2" :model="forgotPasswordForm" class="auth-form" size="large" label-position="top">
+            <el-form-item label="账号">
+              <el-input 
+                v-model="forgotPasswordForm.username" 
+                disabled
+                prefix-icon="User" 
+                class="glass-input"
+              />
+            </el-form-item>
+            
+            <el-form-item label="身份证号">
+              <el-input 
+                v-model="forgotPasswordForm.idCard" 
+                placeholder="请输入身份证号" 
+                prefix-icon="CreditCard" 
+                class="glass-input"
+              />
+            </el-form-item>
+            
+            <el-form-item label="手机号">
+              <el-input 
+                v-model="forgotPasswordForm.phone" 
+                placeholder="请输入手机号" 
+                prefix-icon="Iphone" 
+                class="glass-input"
+              />
+            </el-form-item>
+            
+            <el-button type="primary" class="auth-btn pulse-effect" @click="verifyIdentity" :loading="forgotPasswordLoading" round>
+              验证身份
+            </el-button>
+            
+            <div class="mobile-switch visible-xs">
+              <span @click="forgotPasswordStep = 1">上一步</span> | <span @click="switchToLogin">返回登录</span>
+            </div>
+          </el-form>
+
+          <!-- 第三步：重置密码 -->
+          <el-form v-else-if="forgotPasswordStep === 3" :model="forgotPasswordForm" class="auth-form" size="large" label-position="top">
+            <el-form-item label="账号">
+              <el-input 
+                v-model="forgotPasswordForm.username" 
+                disabled
+                prefix-icon="User" 
+                class="glass-input"
+              />
+            </el-form-item>
+            
+            <el-form-item label="新密码">
+              <el-input 
+                v-model="forgotPasswordForm.newPassword" 
+                type="password"
+                placeholder="请输入新密码" 
+                prefix-icon="Lock" 
+                show-password
+                class="glass-input"
+              />
+            </el-form-item>
+            
+            <el-form-item label="确认新密码">
+              <el-input 
+                v-model="forgotPasswordForm.confirmPassword" 
+                type="password"
+                placeholder="请再次输入新密码" 
+                prefix-icon="Lock" 
+                show-password
+                class="glass-input"
+              />
+            </el-form-item>
+            
+            <el-button type="success" class="auth-btn pulse-effect" @click="handleResetPassword" :loading="forgotPasswordLoading" round>
+              重置密码
+            </el-button>
+            
+            <div class="mobile-switch visible-xs">
+              <span @click="switchToLogin">返回登录</span>
             </div>
           </el-form>
         </div>
@@ -171,10 +284,11 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { FirstAidKit, Right, Back } from "@element-plus/icons-vue"
-import { login, register, getDepts } from '../api'
+import { login, register, getDepts, resetPassword, verifyUserInfo } from '../api'
 
 const router = useRouter()
 const isRegisterMode = ref(false)
+const isForgotPasswordMode = ref(false)
 const rememberMe = ref(false)
 
 // 登录表单
@@ -195,9 +309,40 @@ const registerForm = ref({
 const registerLoading = ref(false)
 const deptList = ref([])
 
+// 忘记密码表单
+const forgotPasswordForm = ref({
+  username: '',
+  idCard: '',
+  phone: '',
+  newPassword: '',
+  confirmPassword: ''
+})
+const forgotPasswordLoading = ref(false)
+const forgotPasswordStep = ref(1) // 1: 输入用户名, 2: 身份验证, 3: 重置密码
+
 // 切换逻辑
-const switchToRegister = () => { isRegisterMode.value = true }
-const switchToLogin = () => { isRegisterMode.value = false }
+const switchToRegister = () => { 
+  isRegisterMode.value = true 
+  isForgotPasswordMode.value = false
+}
+const switchToLogin = () => { 
+  isRegisterMode.value = false 
+  isForgotPasswordMode.value = false
+  forgotPasswordStep.value = 1
+  // 清空忘记密码表单
+  forgotPasswordForm.value = {
+    username: '',
+    idCard: '',
+    phone: '',
+    newPassword: '',
+    confirmPassword: ''
+  }
+}
+const switchToForgotPassword = () => {
+  isForgotPasswordMode.value = true
+  isRegisterMode.value = false
+  forgotPasswordStep.value = 1
+}
 
 // 登录处理
 const handleLogin = async () => {
@@ -229,6 +374,88 @@ const handleLogin = async () => {
     ElMessage.error('登录失败：' + (e.message || '网络错误'))
   } finally {
     loginLoading.value = false
+  }
+}
+
+// 忘记密码 - 检查用户名
+const checkUsername = async () => {
+  if (!forgotPasswordForm.value.username) {
+    return ElMessage.warning('请输入账号')
+  }
+  
+  forgotPasswordLoading.value = true
+  try {
+    // 这里应该调用 API 检查用户名是否存在
+    // 暂时模拟处理
+    setTimeout(() => {
+      forgotPasswordStep.value = 2
+      ElMessage.info('请输入身份信息进行验证')
+    }, 500)
+  } catch (e) {
+    ElMessage.error('检查账号失败：' + (e.message || '网络错误'))
+  } finally {
+    forgotPasswordLoading.value = false
+  }
+}
+
+// 忘记密码 - 身份验证
+const verifyIdentity = async () => {
+  if (!forgotPasswordForm.value.idCard || !forgotPasswordForm.value.phone) {
+    return ElMessage.warning('请输入完整的身份信息')
+  }
+  
+  forgotPasswordLoading.value = true
+  try {
+    // 调用 API 验证身份信息
+    const data = {
+      username: forgotPasswordForm.value.username,
+      id_number: forgotPasswordForm.value.idCard,  // 修复：将idCard改为id_number以匹配后端API
+      phone: forgotPasswordForm.value.phone
+    }
+    
+    await verifyUserInfo(data)
+    
+    forgotPasswordStep.value = 3
+    ElMessage.success('身份验证通过，请设置新密码')
+  } catch (e) {
+    ElMessage.error('身份验证失败：' + (e.message || '网络错误'))
+  } finally {
+    forgotPasswordLoading.value = false
+  }
+}
+
+// 忘记密码 - 重置密码
+const handleResetPassword = async () => {
+  if (!forgotPasswordForm.value.newPassword || !forgotPasswordForm.value.confirmPassword) {
+    return ElMessage.warning('请输入完整密码信息')
+  }
+  
+  if (forgotPasswordForm.value.newPassword !== forgotPasswordForm.value.confirmPassword) {
+    return ElMessage.warning('两次输入的密码不一致')
+  }
+  
+  if (forgotPasswordForm.value.newPassword.length < 6) {
+    return ElMessage.warning('密码长度不能少于6位')
+  }
+  
+  forgotPasswordLoading.value = true
+  try {
+    // 调用 API 重置密码
+    const data = {
+      username: forgotPasswordForm.value.username,
+      idCard: forgotPasswordForm.value.idCard,
+      phone: forgotPasswordForm.value.phone,
+      newPassword: forgotPasswordForm.value.newPassword
+    }
+    
+    await resetPassword(data)
+    
+    ElMessage.success('密码重置成功，请重新登录')
+    switchToLogin()
+  } catch (e) {
+    ElMessage.error('重置密码失败：' + (e.message || '网络错误'))
+  } finally {
+    forgotPasswordLoading.value = false
   }
 }
 
@@ -274,18 +501,10 @@ const handleRoleChange = (val) => {
 
 onMounted(async () => {
   try {
-    const res = await getDepts()
-    deptList.value = res || []
-  } catch(e) { console.error(e) }
-})
-
-onMounted(async () => {
-  try {
-    // 恢复记住我状态和保存的登录信息
+    // 1. 恢复记住我状态和保存的登录信息
     const savedRememberMe = localStorage.getItem('rememberMe') === 'true';
     rememberMe.value = savedRememberMe;
 
-    // 如果用户选择了记住我，则恢复保存的用户名和密码
     if (savedRememberMe) {
       const savedUsername = localStorage.getItem('savedUsername') || '';
       const savedPassword = localStorage.getItem('savedPassword') || '';
@@ -293,9 +512,12 @@ onMounted(async () => {
       loginForm.value.password = savedPassword;
     }
 
+    // 2. 获取科室列表 (只需要执行这一次)
     const res = await getDepts()
     deptList.value = res || []
-  } catch(e) { console.error(e) }
+  } catch(e) {
+    console.error('初始化失败:', e)
+  }
 })
 </script>
 
@@ -419,6 +641,13 @@ onMounted(async () => {
   pointer-events: none;
 }
 
+.forgot-password-form-container {
+  left: 0;
+  opacity: 0;
+  z-index: 1;
+  pointer-events: none;
+}
+
 /* 核心修复：注册模式下登录表单必须透明 */
 .auth-box.register-mode .login-form-container {
   transform: translateX(100%);
@@ -428,6 +657,26 @@ onMounted(async () => {
 
 .auth-box.register-mode .register-form-container {
   transform: translateX(100%);
+  opacity: 1;
+  z-index: 5;
+  pointer-events: all;
+}
+
+/* ---------------------------
+   修复后的忘记密码模式样式
+   ---------------------------
+*/
+
+/* 1. 让登录框原地消失，不要滑走 */
+.auth-box.forgot-password-mode .login-form-container {
+  transform: translateX(0); /* 修改：原来是 100%，改为 0 */
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* 2. 让找回密码框在左侧原地显示 */
+.auth-box.forgot-password-mode .forgot-password-form-container {
+  transform: translateX(0); /* 修改：原来是 100%，改为 0 */
   opacity: 1;
   z-index: 5;
   pointer-events: all;
@@ -550,6 +799,7 @@ h2 {
   background: linear-gradient(to right, #00c6ff, #0072ff);
   box-shadow: 0 10px 20px rgba(0, 114, 255, 0.3);
   margin-top: 20px;
+  margin-bottom: 30px;
   transition: all 0.3s ease;
 }
 
@@ -761,7 +1011,7 @@ h2 {
     height: auto;
     min-height: 100vh;
     padding: 40px 20px;
-    background: rgba(255,255,255,0.85); /* 移动端背景加深 */
+    background: rgba(255, 255, 255, 0.85); /* 移动端背景加深 */
   }
 
   /* 移动端直接控制显隐，不需要滑动动画 */
@@ -781,6 +1031,18 @@ h2 {
     transform: none;
   }
 
+  .forgot-password-form-container {
+    display: none;
+    opacity: 1;
+    pointer-events: all;
+    transform: none;
+  }
+
+  .auth-box.forgot-password-mode .forgot-password-form-container {
+    display: flex;
+    transform: none;
+  }
+  
   .visible-xs {
     display: block;
     margin-top: 20px;
