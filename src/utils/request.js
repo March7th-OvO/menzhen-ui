@@ -2,8 +2,23 @@ import axios from 'axios'
 import { ElMessage } from 'element-plus'
 import router from '../router'
 
+const getBaseURL = () => {
+    const hostname = window.location.hostname
+
+    // 1. 本地开发环境
+    if (hostname === 'localhost' || hostname === '127.0.0.1') {
+        return 'http://localhost:8080/api'
+    }
+
+    // 2. 外网测试环境
+    if (hostname.includes('frp-')) {
+        return 'http://frp-can.com:50001/api'
+    }
+}
+
+// ========== 创建axios实例 ==========
 const service = axios.create({
-    baseURL: 'http://localhost:8080/api', // 你的后端地址
+    baseURL: getBaseURL(), // 自动判断
     timeout: 5000
 })
 
