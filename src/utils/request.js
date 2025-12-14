@@ -2,23 +2,12 @@ import axios from 'axios'
 import { ElMessage } from 'element-plus'
 import router from '../router'
 
-const getBaseURL = () => {
-    const hostname = window.location.hostname
-
-    // 1. 本地开发环境
-    if (hostname === 'localhost' || hostname === '127.0.0.1') {
-        return 'http://localhost:8080/api'
-    }
-
-    // 2. 外网测试环境
-    if (hostname.includes('frp-')) {
-        return 'http://frp-can.com:50001/api'
-    }
-}
-
 // ========== 创建axios实例 ==========
 const service = axios.create({
-    baseURL: getBaseURL(), // 自动判断
+    // 核心修改：直接改成 '/api'
+    // 这样无论你在哪里访问，浏览器都会自动向 "当前域名/api" 发送请求
+    // 然后 Nginx 会截获 "/api"，把它转发给后端的 8080 端口
+    baseURL: '/api',
     timeout: 5000
 })
 
